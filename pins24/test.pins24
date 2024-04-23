@@ -1,0 +1,17 @@
+fun funkcija() = 2*"string"
+fun funkcija(am, bam, pet, podgan)
+fun funkcija(am, bam, pet, podgan) = while 1==1 do "tvojo mami" end
+
+#en komentar da ga zmedes
+fun funkcija()= x = x+2, x*x, x/x, -+-x, !x^
+fun funk() = if "niz" == id then sestavi=x+3 else sestavi=3-sestavi end
+
+fun funk() = if a != b then a = a + b end
+
+fun funkc(a) = if x || !x || b && ^x < c && x <= c || x>= z && 1 < 'c' then x=1 end
+
+var x = 5, 7
+var x = 5 * 5
+var x = 5 * "string"
+var x = 5 * 'c'
+var x =

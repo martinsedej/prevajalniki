@@ -1,10 +1,10 @@
 program -> definition definition2 .
+definition -> FUN IDENTIFIER LPAREN parameters RPAREN definition3 .
+definition -> VAR IDENTIFIER ASSIGN initializers .
 definition2 -> definition definition2 .
 definition2 -> .
-definition -> FUN IDENTIFIER LPAREN parameters RPAREN definition3 .
 definition3 -> .
 definition3 -> ASSIGN statements .
-definition -> VAR IDENTIFIER ASSIGN initializers .
 
 parameters -> .
 parameters -> IDENTIFIER parameters2 .
@@ -86,9 +86,11 @@ initializers -> initializer initializers2 .
 initializers2 -> COMMA initializer initializers2 .
 initializers2 -> .
 
-initializer -> initializer2 const.
-initializer2 -> INSTCONST MUL .
+initializer -> CHARCONST .
+initializer -> STRINGCONST .
+initializer -> INTCONST initializer2 .
 initializer2 -> .
+initializer2 -> MUL const .
 
 const -> INTCONST .
 const -> CHARCONST .
