@@ -52,7 +52,7 @@ public class SynAn implements AutoCloseable {
 	 * Opravi sintaksno analizo celega programa.
 	 */
 	private void parseProgram() {
-		parseAssign(); // TODO: nadomesti z ustrezno metodo
+		 // TODO: nadomesti z ustrezno metodo
 		return;
 	}
 
@@ -70,7 +70,7 @@ public class SynAn implements AutoCloseable {
 	 * so namenjene zgolj in samo ilustraciji, kako se
 	 * napise majhen sintaksni analizator.
 	 */
-
+	/*
 	private void parseAssign() {
 		switch (lexAn.peekToken().symbol()) {
 		case IDENTIFIER:
@@ -110,7 +110,7 @@ public class SynAn implements AutoCloseable {
 			throw new Report.Error(lexAn.peekToken(), "An operator expected.");
 		}
 	}
-
+	*/
 	// --- ZAGON ---
 
 	/**
