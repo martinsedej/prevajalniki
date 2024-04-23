@@ -1,31 +1,35 @@
-definition -> FUN IDENTIFIER LPAREN parameters RPAREN definition2 .
+program -> definition definition2 .
+definition2 -> definition definition2 .
 definition2 -> .
-definition2 -> ASSIGN statements .
+definition -> FUN IDENTIFIER LPAREN parameters RPAREN definition3 .
+definition3 -> .
+definition3 -> ASSIGN statements .
 definition -> VAR IDENTIFIER ASSIGN initializers .
-definitions -> definition definitions2 .
-definitions2 -> definitions .
-definitions2 -> .
 
+parameters -> .
 parameters -> IDENTIFIER parameters2 .
 parameters2 -> COMMA parameters .
 parameters2 -> .
 
-statements -> statement stmt .
-stmt -> .
-stmt -> COMMA statements .
-statement -> expression statement2 .
-statement2 -> .
-statement2 -> ASSIGN expression .
-statement -> IF expression THEN statements statementEnd .
-statementEnd -> END .
-statementEnd -> ELSE statements END .
+statements -> statement statements2 .
+statements2 -> COMMA statements .
+statements2 -> .
+statement -> expression expression2 .
+statement -> IF expression THEN statements statementElse END .
 statement -> WHILE expression DO statements END .
-statement -> LET definitions IN statements END .
-
-
-expression -> eAnd expression2 .
-expression2 -> OR eAnd expression2 .
+statement -> LET definicije IN statements END .
+statementElse -> ELSE statements .
+statementElse -> .
+expression2 -> ASSIGN expression .
 expression2 -> .
+
+definicije -> definition definicije2 .
+definicije2 -> definicije .
+definicije2 -> .
+
+expression -> eAnd eOR .
+eOR -> OR eAnd eOR .
+eOR -> .
 
 eAnd -> eComp eAnd2 .
 eAnd2 -> AND eComp eAnd2 .
@@ -49,40 +53,42 @@ eMul -> ePrefix eMul2 .
 eMul2 -> MUL ePrefix eMul2 .
 eMul2 -> DIV ePrefix eMul2 .
 eMul2 -> MOD ePrefix eMul2 .
+eMul2 -> .
 
 ePrefix -> prefix ePostfix .
-prefix -> prefix PTR .
-prefix -> prefix NOT .
-prefix -> prefix ADD .
-prefix -> prefix SUB .
+prefix -> prefix2 .
+prefix2 -> prefixOp prefix2 .
+prefix2 -> .
+prefixOp -> NOT .
+prefixOp -> ADD .
+prefixOp -> SUB .
+prefixOp -> PTR .
 
-ePostfix -> koncniE postfix .
-postfix -> postfix2 .
-postfix2 -> PTR postfix2 .
-postfix2 -> .
+ePostfix -> eKoncni postfix .
+postfix -> PTR postfix .
+postfix -> .
 
-koncniE -> INTCONST .
-koncniE -> CHARCONST .
-koncniE -> STRINGCONST .
-koncniE -> IDENTIFIER koncniE2 .
-koncniE2 -> LPAREN arguments RPAREN .
-koncniE2 -> .
+eKoncni -> INTCONST .
+eKoncni -> CHARCONST .
+eKoncni -> STRINGCONST .
+eKoncni -> IDENTIFIER args .
+eKoncni -> LPAREN expression RPAREN .
+args -> LPAREN arguments RPAREN .
+args -> .
 
-arguments -> arguments2 .
+arguments -> .
+arguments -> expression arguments2 .
+arguments2 -> COMMA expression arguments2 .
 arguments2 -> .
-arguments2 -> expression arguments3 .
-arguments3 -> .
-arguments3 -> COMMA expression arguments3 .
 
-initializers -> initializers2 .
+initializers -> .
+initializers -> initializer initializers2 .
+initializers2 -> COMMA initializer initializers2 .
 initializers2 -> .
-initializers2 -> initializer initializers3 .
-initializers3 -> .
-initializers3 -> COMMA initializer initializers3 .
 
-initializer -> initializer2 const .
+initializer -> initializer2 const.
+initializer2 -> INSTCONST MUL .
 initializer2 -> .
-initializer2 -> INTCONST MUL .
 
 const -> INTCONST .
 const -> CHARCONST .
