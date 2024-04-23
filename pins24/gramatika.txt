@@ -1,0 +1,89 @@
+definition -> FUN IDENTIFIER LPAREN parameters RPAREN definition2 .
+definition2 -> .
+definition2 -> ASSIGN statements .
+definition -> VAR IDENTIFIER ASSIGN initializers .
+definitions -> definition definitions2 .
+definitions2 -> definitions .
+definitions2 -> .
+
+parameters -> IDENTIFIER parameters2 .
+parameters2 -> COMMA parameters .
+parameters2 -> .
+
+statements -> statement stmt .
+stmt -> .
+stmt -> COMMA statements .
+statement -> expression statement2 .
+statement2 -> .
+statement2 -> ASSIGN expression .
+statement -> IF expression THEN statements statementEnd .
+statementEnd -> END .
+statementEnd -> ELSE statements END .
+statement -> WHILE expression DO statements END .
+statement -> LET definitions IN statements END .
+
+
+expression -> eAnd expression2 .
+expression2 -> OR eAnd expression2 .
+expression2 -> .
+
+eAnd -> eComp eAnd2 .
+eAnd2 -> AND eComp eAnd2 .
+eAnd2 -> .
+
+eComp -> eAdit eComp2 .
+eComp2 -> EQU eAdit .
+eComp2 -> NEQ eAdit .
+eComp2 -> GTH eAdit .
+eComp2 -> LTH eAdit .
+eComp2 -> GEQ eAdit .
+eComp2 -> LEQ eAdit .
+eComp2 -> .
+
+eAdit -> eMul eAdit2 .
+eAdit2 -> ADD eMul eAdit2 .
+eAdit2 -> SUB eMul eAdit2 .
+eAdit2 -> .
+
+eMul -> ePrefix eMul2 .
+eMul2 -> MUL ePrefix eMul2 .
+eMul2 -> DIV ePrefix eMul2 .
+eMul2 -> MOD ePrefix eMul2 .
+
+ePrefix -> prefix ePostfix .
+prefix -> prefix PTR .
+prefix -> prefix NOT .
+prefix -> prefix ADD .
+prefix -> prefix SUB .
+
+ePostfix -> koncniE postfix .
+postfix -> postfix2 .
+postfix2 -> PTR postfix2 .
+postfix2 -> .
+
+koncniE -> INTCONST .
+koncniE -> CHARCONST .
+koncniE -> STRINGCONST .
+koncniE -> IDENTIFIER koncniE2 .
+koncniE2 -> LPAREN arguments RPAREN .
+koncniE2 -> .
+
+arguments -> arguments2 .
+arguments2 -> .
+arguments2 -> expression arguments3 .
+arguments3 -> .
+arguments3 -> COMMA expression arguments3 .
+
+initializers -> initializers2 .
+initializers2 -> .
+initializers2 -> initializer initializers3 .
+initializers3 -> .
+initializers3 -> COMMA initializer initializers3 .
+
+initializer -> initializer2 const .
+initializer2 -> .
+initializer2 -> INTCONST MUL .
+
+const -> INTCONST .
+const -> CHARCONST .
+const -> STRINGCONST .
