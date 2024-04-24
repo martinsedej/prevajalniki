@@ -64,7 +64,7 @@ public class SynAn implements AutoCloseable {
 				parseDefinition2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovana definicija");
+				throw new Report.Error(lexAn.peekToken(), "|program| Pricakovan fun ali var, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseDefinition2(){
@@ -76,7 +76,7 @@ public class SynAn implements AutoCloseable {
 			case EOF:
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovana definicija ali konec datoteke");
+				throw new Report.Error(lexAn.peekToken(), "|definition2| Pricakovana fun, var ali konec datoteke, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseDefinition(){
@@ -96,7 +96,7 @@ public class SynAn implements AutoCloseable {
 				parseInitializers();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovana definicija.");
+				throw new Report.Error(lexAn.peekToken(), "|definition| Pricakovan var ali fun, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseDefinition3(){
@@ -110,7 +110,7 @@ public class SynAn implements AutoCloseable {
 			case EOF:
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Definition3 pricakovan.");
+				throw new Report.Error(lexAn.peekToken(), "|definition3| Pricakovan fun, = ali EOF, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseParameters(){
@@ -122,7 +122,7 @@ public class SynAn implements AutoCloseable {
 			case RPAREN:
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovan identifier ali zaklepaj, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
+				throw new Report.Error(lexAn.peekToken(), "|parameters| Pricakovan identifier ali zaklepaj, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
 		}
 	}
 	private void parseParameters2(){
@@ -134,7 +134,7 @@ public class SynAn implements AutoCloseable {
 				parseParameters();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovan zaklepaj ali vejica, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
+				throw new Report.Error(lexAn.peekToken(), "|parameters2| Pricakovan zaklepaj ali vejica, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
 		}
 	}
 	private void parseStatements(){
@@ -144,7 +144,7 @@ public class SynAn implements AutoCloseable {
 				parseStatements2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Pricakovan identifier, oklepaj, if, while, let, add, minus, negacija, kazalec ali konstanta, dobil pa " + lexAn.peekToken().symbol());
+				throw new Report.Error(lexAn.peekToken(), "|statements| Pricakovan identifier, oklepaj, if, while, let, add, minus, negacija, kazalec ali konstanta, dobil pa " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseStatements2(){
@@ -156,7 +156,7 @@ public class SynAn implements AutoCloseable {
 				parseStatements();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovan fun, var, end, in, else, EOF ali vejica, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
+				throw new Report.Error(lexAn.peekToken(), "|statements2| Pricakovan fun, var, end, in, else, EOF ali vejica, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
 		}
 	}
 	private void parseStatement(){
@@ -188,7 +188,7 @@ public class SynAn implements AutoCloseable {
 				check(Token.Symbol.END);
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Nepricakovan znak, pricakuje se identifier lparen add sub not ptr intconst charconst stringconst if while ali let.");
+				throw new Report.Error(lexAn.peekToken(), "|statement| Pricakovan je identifier, oklepaj, plus, minus, negacija, kazalec, konstante, if while ali let, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseStatementElse(){
@@ -200,7 +200,7 @@ public class SynAn implements AutoCloseable {
 				parseStatements();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Nepricakovan znak, pricakuje se end ali else.");
+				throw new Report.Error(lexAn.peekToken(), "|statementElse| Pricakovan end ali else, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseExpression2(){
@@ -212,7 +212,7 @@ public class SynAn implements AutoCloseable {
 				parseExpression();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Nepricakovan znak, pricakuje se fun var comma end in else konec datoteke ali assign.");
+				throw new Report.Error(lexAn.peekToken(), "|expression2| Pricakovan fun, var, vejica, end, in, else, EOF ali =, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseDefinicije(){
@@ -222,7 +222,7 @@ public class SynAn implements AutoCloseable {
 				parseDefinicije2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovana je bila definicija funkcije ali spremenljivke.");
+				throw new Report.Error(lexAn.peekToken(), "|definicije| Pricakovan fun ali var, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseDefinicije2(){
@@ -233,7 +233,7 @@ public class SynAn implements AutoCloseable {
 			case IN:
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se definicija ali IN.");
+				throw new Report.Error(lexAn.peekToken(), "|definicije2| Pricakovan fun, var ali in, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseExpression(){
@@ -243,7 +243,7 @@ public class SynAn implements AutoCloseable {
 				parseEOR();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakovan identifier lparen add sub not ptr intconst charconst ali stringconst.");
+				throw new Report.Error(lexAn.peekToken(), "|expression| Pricakovan identifier, oklepaj, plus, minus, negacija, kazalec ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEOR(){
@@ -256,7 +256,7 @@ public class SynAn implements AutoCloseable {
 				parseEOR();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se fun rparen assign var comma then end do in else konec datoteke ali or.");
+				throw new Report.Error(lexAn.peekToken(), "|eOR| Pricakuje se fun, zaklepaj, =, var, vejica, then, end, do, in, else, konec datoteke ali or, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEAnd(){
@@ -266,7 +266,7 @@ public class SynAn implements AutoCloseable {
 				parseEAnd2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se identifier lparen add sub not ptr intconst charconst ali stringconst.");
+				throw new Report.Error(lexAn.peekToken(), "|eAnd| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEAnd2(){
@@ -279,7 +279,7 @@ public class SynAn implements AutoCloseable {
 				parseEAnd2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se fun rparen assign var comma then end do in else konec datoteke or ali and.");
+				throw new Report.Error(lexAn.peekToken(), "|eAnd2| Pricakuje se fun, zaklepaj, =, var, vejica, then, end, do, in, else, konec datoteke, or ali and, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEComp(){
@@ -289,7 +289,7 @@ public class SynAn implements AutoCloseable {
 				parseEComp2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se identifier lparen add sub not ptr intconst charconst ali stringconst.");
+				throw new Report.Error(lexAn.peekToken(), "|eComp| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEComp2(){
@@ -321,7 +321,7 @@ public class SynAn implements AutoCloseable {
 				parseEAdit();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se fun rparen assign var comma then end do in else or and eof equ neq gth lth geq ali leq.");
+				throw new Report.Error(lexAn.peekToken(), "|eComp2| Pricakuje se fun, zaklepaj, =, var, vejica, then, end, do, in, else, or, and, EOF, ==, !=, >, <, >= ali <=, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEAdit(){
@@ -331,7 +331,7 @@ public class SynAn implements AutoCloseable {
 				parseEAdit2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Pricakuje se identifier lparen add sub not ptr intconst charconst ali stringconst.");
+				throw new Report.Error(lexAn.peekToken(), "|eAdit| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEAdit2(){
@@ -349,17 +349,17 @@ public class SynAn implements AutoCloseable {
 				parseEAdit2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "EAdit2 napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|eAdit2| Pricakovan plus, sub ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEMul(){
 		switch(lexAn.peekToken().symbol()){
-			case IDENTIFIER: case RPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
+			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
 				parseEPrefix();
 				parseEMul2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "EMul napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|eMul| Pricakovan identifier, zaklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEMul2(){
@@ -382,26 +382,26 @@ public class SynAn implements AutoCloseable {
 				parseEMul2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "EMul2 napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|eMul2| Pricakovan *, /, % ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEPrefix(){
 		switch(lexAn.peekToken().symbol()){
-			case IDENTIFIER: case RPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
+			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
 				parsePrefix();
 				parseEPostfix();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "EPrefix napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|ePrefix| Pricakovan identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parsePrefix(){
 		switch(lexAn.peekToken().symbol()){
-			case IDENTIFIER: case RPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
+			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
 				parsePrefix2();
 				return;
 			default:
-				throw new Report.Error(lexAn.peekToken(), "Prefix napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|prefix| Pricakoval identifier, oklepaj, plus, minus, negacija, kazalec ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parsePrefix2(){
@@ -413,7 +413,7 @@ public class SynAn implements AutoCloseable {
 				parsePrefix2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Prefix2 napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|prefix2| Pricakovan prefix, identifier, okepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parsePrefixOp(){
@@ -431,7 +431,7 @@ public class SynAn implements AutoCloseable {
 				check(Token.Symbol.PTR);
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "PrefixOp napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|prefixOp| Pricakoval prefix, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEPostfix(){
@@ -441,7 +441,7 @@ public class SynAn implements AutoCloseable {
 				parsePostfix();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "EPostfix napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|ePostfix| Pricakovan identifier, oklepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parsePostfix(){
@@ -453,7 +453,7 @@ public class SynAn implements AutoCloseable {
 				parsePostfix();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Postfix napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|postfix| Pricakovan kazalec ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseEKoncni(){
@@ -477,7 +477,7 @@ public class SynAn implements AutoCloseable {
 				check(Token.Symbol.STRINGCONST);
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "EKoncni napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|eKoncni| Pricakovan identifier, oklepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseArgs(){
@@ -490,7 +490,7 @@ public class SynAn implements AutoCloseable {
 				check(Token.Symbol.RPAREN);
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Dobil nepricakovan znak " + lexAn.peekToken().symbol());
+				throw new Report.Error(lexAn.peekToken(), "|args| Pricakoval oklepaj ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseArguments(){
@@ -502,7 +502,7 @@ public class SynAn implements AutoCloseable {
 			case RPAREN: 
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Arguments napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|arguments| Pricakoval identifier, (, ),  +, -, !, ^ ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseArguments2(){
@@ -511,11 +511,11 @@ public class SynAn implements AutoCloseable {
 				return;
 			case COMMA:
 				check(Token.Symbol.COMMA);
-				parseInitializer();
-				parseInitializers2();
+				parseExpression();
+				parseArguments2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Arguments2 napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|arguments2| Pricakoval ) ali vejico, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseInitializers(){
@@ -527,7 +527,7 @@ public class SynAn implements AutoCloseable {
 				parseInitializers2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Pricakoval fun, var, in, case, EOF ali konstanto, dobil " + lexAn.peekToken().symbol());
+				throw new Report.Error(lexAn.peekToken(), "|initializers| Pricakoval fun, var, in, case, EOF ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseInitializers2(){
@@ -540,7 +540,7 @@ public class SynAn implements AutoCloseable {
 				parseInitializers2();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Initializers2 napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|initializers2| Pricakoval vejico, fun, var, in ali EOF, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseInitializer(){
@@ -556,7 +556,7 @@ public class SynAn implements AutoCloseable {
 				check(Token.Symbol.STRINGCONST);
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Initializer napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|initializer| Pricakovana konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseInitializer2(){
@@ -568,7 +568,7 @@ public class SynAn implements AutoCloseable {
 				parseConst();
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Initializer2 napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|initializer2| Pricakovana fun, var, vejica, in EOF ali mnozenje, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	private void parseConst(){
@@ -583,7 +583,7 @@ public class SynAn implements AutoCloseable {
 				check(Token.Symbol.STRINGCONST);
 				return;
 			default: 
-				throw new Report.Error(lexAn.peekToken(), "Const napaka.");
+				throw new Report.Error(lexAn.peekToken(), "|const| Pricakovana konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
 	// --- ZAGON ---
