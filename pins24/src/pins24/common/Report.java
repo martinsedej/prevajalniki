@@ -5,7 +5,7 @@ package pins24.common;
  */
 public class Report {
 
-	/** (Dodano samo zato, da javadoc ne tezi.) */
+	@SuppressWarnings({ "doclint:missing" })
 	private Report() {
 		throw new InternalError();
 	}
@@ -28,6 +28,16 @@ public class Report {
 		 */
 		public Location(int line, int column) {
 			this(line, column, line, column);
+		}
+
+		/**
+		 * Ustvari novo lokacijo, ki se razteza od ene do druge lokacije.
+		 * 
+		 * @param beg Prva lokacija.
+		 * @param end Druga lokacija.
+		 */
+		public Location(Locatable beg, Locatable end) {
+			this(beg.location().begLine, beg.location().begColumn, end.location().endLine, end.location().endColumn);
 		}
 
 		@Override
