@@ -3,6 +3,7 @@ package pins24.phase;
 import java.time.zone.ZoneOffsetTransitionRule.TimeDefinition;
 
 import pins24.common.*;
+import pins24.common.AST.AtomExpr.Type;
 
 /**
  * Sintaksni analizator.
@@ -571,11 +572,13 @@ public class SynAn implements AutoCloseable {
 				throw new Report.Error(lexAn.peekToken(), "|initializer2| Pricakovana fun, var, vejica, in EOF ali mnozenje, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseConst(){
+	private AST.Expr parseConst(){
 		switch(lexAn.peekToken().symbol()){
 			case INTCONST:
-				check(Token.Symbol.INTCONST);
-				return;
+				Token intc = check(Token.Symbol.INTCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.INTCONST, intc.lexeme());
+				attrAST.attrLoc.put(atom, intc);
+				return atom;
 			case CHARCONST:
 				check(Token.Symbol.CHARCONST);
 				return;
