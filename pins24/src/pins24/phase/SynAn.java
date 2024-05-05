@@ -1,9 +1,11 @@
 package pins24.phase;
 
 import java.time.zone.ZoneOffsetTransitionRule.TimeDefinition;
+import java.util.*;
 
 import pins24.common.*;
 import pins24.common.AST.AtomExpr.Type;
+import pins24.common.AST.UnExpr.Oper;
 
 /**
  * Sintaksni analizator.
@@ -12,6 +14,7 @@ public class SynAn implements AutoCloseable {
 
 	/** Leksikalni analizator. */
 	private final LexAn lexAn;
+	private HashMap<AST.Node, Report.Locatable> attrLoc;
 
 	/**
 	 * Ustvari nov sintaksni analizator.
@@ -44,150 +47,186 @@ public class SynAn implements AutoCloseable {
 	/**
 	 * Opravi sintaksno analizo.
 	 */
-	public void parse() {
-		parseProgram();
+	public AST.Node parse(HashMap<AST.Node, Report.Locatable> attrLoc) {
+		this.attrLoc = attrLoc;
+		final AST.Nodes<AST.MainDef> defs = parseProgram();
 		if (lexAn.peekToken().symbol() != Token.Symbol.EOF)
 			Report.warning(lexAn.peekToken(),
-					"Unexpected text '" + lexAn.peekToken().lexeme() + "...' at the end of the program.");
-	}
+				"Unexpected text '" + lexAn.peekToken().lexeme() + "...' at the end of the program.");
+		return defs;
+}
 
 	/**
 	 * Opravi sintaksno analizo celega programa.
 	 */
-	private void parseProgram() {
+	private AST.Nodes<AST.MainDef> parseProgram() {
 		switch(lexAn.peekToken().symbol()){
-			case FUN:
-				parseDefinition();
-				parseDefinition2();
-				return;
-			case VAR:
-				parseDefinition();
-				parseDefinition2();
-				return;
+			case FUN: {
+				AST.FunDef fun = parseDefinition();
+				List<AST.MainDef> maindef = parseDefinition2();
+				AST.Nodes<AST.MainDef> tmp;
+				if(maindef == null){
+					maindef.add(fun);
+					tmp = new AST.Nodes<AST.MainDef>(maindef);
+				}
+				return tmp;
+			}
+			case VAR: {
+				AST.VarDef var = parseDefinition();
+				List<AST.MainDef> maindef = parseDefinition2();
+				AST.Nodes<AST.MainDef> tmp;
+				if(maindef == null){
+					maindef.add(var);
+					tmp = new AST.Nodes<AST.MainDef>(maindef);
+				}
+				return tmp;
+			}
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|program| Pricakovan fun ali var, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseDefinition2(){
+	private List<AST.MainDef> parseDefinition2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR:
-				parseDefinition();
-				parseDefinition2();
-				return;
+				AST.MainDef maindef = parseDefinition();
+				List<AST.MainDef> maindefs = parseDefinition2();
+				if(maindefs == null){
+					maindefs = new ArrayList<AST.MainDef>();
+				}
+				maindefs.add(maindef);
+				return maindefs;
 			case EOF:
-				return;
+				return null;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|definition2| Pricakovana fun, var ali konec datoteke, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseDefinition(){
+	private AST.MainDef parseDefinition(){
 		switch(lexAn.peekToken().symbol()){
-			case FUN:
-				check(Token.Symbol.FUN);
-				check(Token.Symbol.IDENTIFIER);
-				check(Token.Symbol.LPAREN);
-				parseParameters();
-				check(Token.Symbol.RPAREN);
-				parseDefinition3();
-				return;
-			case VAR:
-				check(Token.Symbol.VAR);
-				check(Token.Symbol.IDENTIFIER);
-				check(Token.Symbol.ASSIGN);
-				parseInitializers();
-				return;
+			case FUN: {
+				Token fun = check(Token.Symbol.FUN);
+				Token id = check(Token.Symbol.IDENTIFIER);
+				Token lparen = check(Token.Symbol.LPAREN);
+				List<AST.ParDef> pars = parseParameters();
+				Token rparen = check(Token.Symbol.RPAREN);
+				List<AST.Stmt> stmts = parseDefinition3();
+				AST.MainDef maindef = new AST.FunDef(id.lexeme(), pars, stmts);
+				return maindef;
+			}
+			case VAR: {
+				Token var = check(Token.Symbol.VAR);
+				Token id = check(Token.Symbol.IDENTIFIER);
+				Token assign = check(Token.Symbol.ASSIGN);
+				List<AST.Init> inits =  parseInitializers();
+				AST.MainDef maindef = new AST.VarDef(id.lexeme(), inits);
+				return maindef;
+			}
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|definition| Pricakovan var ali fun, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseDefinition3(){
+	private List<AST.Stmt> parseDefinition3(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN:
-				return;
+				return null;
 			case ASSIGN:
-				check(Token.Symbol.ASSIGN);
-				parseStatements();
-				return;
+				Token assign = check(Token.Symbol.ASSIGN);
+				List<AST.Stmt> stmts = parseStatements();
+				return stmts;
 			case EOF:
-				return;
+				return null;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|definition3| Pricakovan fun, = ali EOF, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseParameters(){
+	private List<AST.ParDef> parseParameters(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER:
-				check(Token.Symbol.IDENTIFIER);
-				parseParameters2();
-				return;
+				Token id = check(Token.Symbol.IDENTIFIER);
+				AST.ParDef pardef = new AST.ParDef(id.lexeme());
+				List<AST.ParDef> pardefs = parseParameters2();
+				if(pardefs == null){
+					pardefs = new ArrayList<AST.ParDef>();
+				}
+				pardefs.add(pardef);
+				return pardefs;
 			case RPAREN:
-				return;
+				return null;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|parameters| Pricakovan identifier ali zaklepaj, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
 		}
 	}
-	private void parseParameters2(){
+	private List<AST.ParDef> parseParameters2(){
 		switch(lexAn.peekToken().symbol()){
 			case RPAREN:
-				return;
+				return null;
 			case COMMA:
-				check(Token.Symbol.COMMA);
-				parseParameters();
-				return;
+				Token comma = check(Token.Symbol.COMMA);
+				List<AST.ParDef> pardefs = parseParameters();
+				return pardefs;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|parameters2| Pricakovan zaklepaj ali vejica, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
 		}
 	}
-	private void parseStatements(){
+	private List<AST.Stmt> parseStatements(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case IF: case WHILE: case LET: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseStatement();
-				parseStatements2();
-				return;
+				AST.Stmt stmt = parseStatement();
+				List<AST.Stmt> stmts = parseStatements2();
+				if(stmts == null){
+					stmts = new ArrayList<AST.Stmt>();
+				}
+				stmts.add(stmt);
+				return stmts;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|statements| Pricakovan identifier, oklepaj, if, while, let, add, minus, negacija, kazalec ali konstanta, dobil pa " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseStatements2(){
+	private List<AST.Stmt> parseStatements2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR: case END: case IN: case ELSE: case EOF:
-				return;
+				return null;
 			case COMMA:
-				check(Token.Symbol.COMMA);
-				parseStatements();
-				return;
+				Token comma = check(Token.Symbol.COMMA);
+				List<AST.Stmt> stmts = parseStatements();
+				return stmts;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|statements2| Pricakovan fun, var, end, in, else, EOF ali vejica, dobil " + lexAn.peekToken().symbol() + " " + lexAn.peekToken().lexeme());
 		}
 	}
-	private void parseStatement(){
+	private AST.Stmt parseStatement(){
 		switch(lexAn.peekToken().symbol()){
-			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseExpression();
+			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST: {
+				AST.Expr expr = parseExpression();
 				parseExpression2();
-				return;
-			case IF:
-				check(Token.Symbol.IF);
-				parseExpression();
+				AST.Stmt stmt = new AST.ExprStmt(expr);
+				return stmt;
+			}
+			case IF: {
+				Token if = check(Token.Symbol.IF);
+				AST.Expr expr = parseExpression();
 				check(Token.Symbol.THEN);
 				parseStatements();
 				parseStatementElse();
 				check(Token.Symbol.END);
 				return;
-			case WHILE:
+			}
+			case WHILE: {
 				check(Token.Symbol.WHILE);
 				parseExpression();
 				check(Token.Symbol.DO);
 				parseStatements();
 				check(Token.Symbol.END);
 				return;
-			case LET:
+			}
+			case LET: {
 				check(Token.Symbol.LET);
 				parseDefinicije();
 				check(Token.Symbol.IN);
 				parseStatements();
 				check(Token.Symbol.END);
 				return;
+			}
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|statement| Pricakovan je identifier, oklepaj, plus, minus, negacija, kazalec, konstante, if while ali let, dobil " + lexAn.peekToken().symbol());
 		}
@@ -420,7 +459,7 @@ public class SynAn implements AutoCloseable {
 	private void parsePrefixOp(){
 		switch(lexAn.peekToken().symbol()){
 			case ADD:
-				check(Token.Symbol.ADD);
+				Token add = check(Token.Symbol.ADD);
 				return;
 			case SUB:
 				check(Token.Symbol.SUB);
@@ -435,156 +474,227 @@ public class SynAn implements AutoCloseable {
 				throw new Report.Error(lexAn.peekToken(), "|prefixOp| Pricakoval prefix, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEPostfix(){
+	private AST.Expr parseEPostfix(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseEKoncni();
-				parsePostfix();
-				return;
+				AST.Expr expr = parseEKoncni();
+				AST.Expr expr2 = parsePostfix();
+				if(expr2 != null){
+
+				}
+				return expr;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|ePostfix| Pricakovan identifier, oklepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parsePostfix(){
+	private AST.UnExpr parsePostfix(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF: case EQU: case NEQ: case GTH: case LTH: case GEQ: case LEQ: case ADD: case SUB: case MUL: case DIV: case MOD:
-				return;
+				return null;
 			case PTR:
-				check(Token.Symbol.PTR);
-				parsePostfix();
-				return;
+				Token ptr = check(Token.Symbol.PTR);
+				AST.UnExpr expr = parsePostfix();
+				if(expr == null){
+					expr = new AST.UnExpr(Oper.VALUEAT, expr);
+				}
+				return expr;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|postfix| Pricakovan kazalec ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEKoncni(){
+	private AST.Expr parseEKoncni(){
 		switch(lexAn.peekToken().symbol()){
-			case IDENTIFIER: 
-				check(Token.Symbol.IDENTIFIER);
-				parseArgs();
-				return;
-			case LPAREN:
-				check(Token.Symbol.LPAREN);
-				parseExpression();
-				check(Token.Symbol.RPAREN);
-				return;
-			case INTCONST:
-				check(Token.Symbol.INTCONST);
-				return;
-			case CHARCONST:
-				check(Token.Symbol.CHARCONST);
-				return;
-			case STRINGCONST:
-				check(Token.Symbol.STRINGCONST);
-				return;
+			case IDENTIFIER: {
+				Token id = check(Token.Symbol.IDENTIFIER);
+				List<AST.Expr> exprs = parseArgs();
+				AST.Expr expr;
+				if(exprs == null){
+					expr = new AST.VarExpr(id.lexeme());
+				}
+				else {
+					expr = new AST.CallExpr(id.lexeme(), exprs);
+				}
+				return expr;
+			}
+			case LPAREN: {
+				Token lparen = check(Token.Symbol.LPAREN);
+				AST.Expr expr = parseExpression();
+				Token rparen = check(Token.Symbol.RPAREN);
+				return expr;
+			}
+			case INTCONST: {
+				Token intc = check(Token.Symbol.INTCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.INTCONST, intc.lexeme());
+				return atom;
+			}
+			case CHARCONST: {
+				Token charc = check(Token.Symbol.CHARCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.CHRCONST, charc.lexeme());
+				return atom;
+			}
+			case STRINGCONST: {
+				Token stringc = check(Token.Symbol.STRINGCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.STRCONST, stringc.lexeme());
+				return atom;
+			}
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|eKoncni| Pricakovan identifier, oklepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseArgs(){
+	private List<AST.Expr> parseArgs(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF: case EQU: case NEQ: case GTH: case LTH: case GEQ: case LEQ: case ADD: case SUB: case MUL: case DIV: case MOD: case PTR:
-				return;
+				return null;
 			case LPAREN:
-				check(Token.Symbol.LPAREN);
-				parseArguments();
-				check(Token.Symbol.RPAREN);
-				return;
+				Token lparen = check(Token.Symbol.LPAREN);
+				List<AST.Expr> exprs = parseArguments();
+				Token rparen = check(Token.Symbol.RPAREN);
+				return exprs;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|args| Pricakoval oklepaj ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseArguments(){
+	private List<AST.Expr> parseArguments(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseExpression();
-				parseArguments2();
-				return;
+				AST.Expr expr = parseExpression();
+				List<AST.Expr> exprs = parseArguments2();
+				if(exprs == null){
+					exprs = new ArrayList<AST.Expr>();
+				}
+				exprs.add(expr);
+				return exprs;
 			case RPAREN: 
-				return;
+				return null;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|arguments| Pricakoval identifier, (, ),  +, -, !, ^ ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseArguments2(){
+	private List<AST.Expr> parseArguments2(){
 		switch(lexAn.peekToken().symbol()){
 			case RPAREN: 
-				return;
+				return null;
 			case COMMA:
 				check(Token.Symbol.COMMA);
-				parseExpression();
-				parseArguments2();
-				return;
+				AST.Expr expr = parseExpression();
+				List<AST.Expr> exprs = parseArguments2();
+				if(exprs == null){
+					exprs = new ArrayList<AST.Expr>();
+				}
+				exprs.add(expr);
+				return exprs;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|arguments2| Pricakoval ) ali vejico, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseInitializers(){
+	private List<AST.Init> parseInitializers(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR: case IN: case EOF:
-				return;
+				return null;
 			case INTCONST: case STRINGCONST: case CHARCONST:
-				parseInitializer();
-				parseInitializers2();
-				return;
+				AST.Init init = parseInitializer();
+				List<AST.Init> inits = parseInitializers2();
+				if(inits == null){
+					inits = new ArrayList<AST.Init>();
+				}
+				inits.add(init);
+				return inits;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|initializers| Pricakoval fun, var, in, case, EOF ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseInitializers2(){
+	private List<AST.Init> parseInitializers2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR: case IN: case EOF:
-				return;
+				return null;
 			case COMMA:
-				check(Token.Symbol.COMMA);
-				parseInitializer();
-				parseInitializers2();
-				return;
+				Token comma = check(Token.Symbol.COMMA);
+				AST.Init init = parseInitializer();
+				attrLoc.put(init, comma);
+				List<AST.Init> init2 = parseInitializers2();
+				List<AST.Init> inits;
+				if(init2 == null){
+					inits = new ArrayList<AST.Init>();
+				}
+				else {
+					inits = new ArrayList<AST.Init>(init2);
+				}
+				inits.add(init);
+				return inits;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|initializers2| Pricakoval vejico, fun, var, in ali EOF, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseInitializer(){
+	private AST.Init parseInitializer(){
 		switch(lexAn.peekToken().symbol()){
-			case INTCONST: 
-				check(Token.Symbol.INTCONST);
-				parseInitializer2();
-				return;
-			case CHARCONST:
-				check(Token.Symbol.CHARCONST);
-				return;
-			case STRINGCONST: 
-				check(Token.Symbol.STRINGCONST);
-				return;
+			case INTCONST: {
+				Token intc = check(Token.Symbol.INTCONST);
+				AST.AtomExpr value = new AST.AtomExpr(Type.INTCONST, intc.lexeme());
+				attrLoc.put(value, intc);
+				AST.AtomExpr atom = parseInitializer2();
+				AST.Init init;
+				if(atom == null){
+					init = new AST.Init(new AST.AtomExpr(Type.INTCONST, "1"), value);
+					attrLoc.put(init, new Report.Location(intc, attrLoc.get(value)));
+				}
+				else {
+					init = new AST.Init(atom, value);
+					attrLoc.put(init, new Report.Location(intc, attrLoc.get(atom)));
+				}
+				return init;
+			}
+			case CHARCONST:{
+				Token charc = check(Token.Symbol.CHARCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.CHRCONST, charc.lexeme());
+				AST.Init init = new AST.Init(new AST.AtomExpr(Type.INTCONST, "1"), atom);
+				attrLoc.put(init, new Report.Location(charc, attrLoc.get(atom)));
+				attrLoc.put(atom, charc);
+				return init;
+			}	
+			case STRINGCONST: {
+				Token stringc = check(Token.Symbol.STRINGCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.STRCONST, stringc.lexeme());
+				AST.Init init = new AST.Init(new AST.AtomExpr(Type.INTCONST, "1"), atom);
+				attrLoc.put(init, new Report.Location(stringc, attrLoc.get(atom)));
+				attrLoc.put(atom, stringc);
+				return init;
+			}
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|initializer| Pricakovana konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseInitializer2(){
+	private AST.AtomExpr parseInitializer2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR: case COMMA: case IN: case EOF:
-				return;
+				return null;
 			case MUL:
-				check(Token.Symbol.MUL);
-				parseConst();
-				return;
+				Token mul = check(Token.Symbol.MUL);
+				AST.AtomExpr atom = parseConst();
+				attrLoc.put(atom, mul);
+				return atom;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|initializer2| Pricakovana fun, var, vejica, in EOF ali mnozenje, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private AST.Expr parseConst(){
+	private AST.AtomExpr parseConst(){
 		switch(lexAn.peekToken().symbol()){
-			case INTCONST:
+			case INTCONST:{
 				Token intc = check(Token.Symbol.INTCONST);
 				AST.AtomExpr atom = new AST.AtomExpr(Type.INTCONST, intc.lexeme());
-				attrAST.attrLoc.put(atom, intc);
+				attrLoc.put(atom, intc);
 				return atom;
-			case CHARCONST:
-				check(Token.Symbol.CHARCONST);
-				return;
+			}
+			case CHARCONST:{
+				Token charc = check(Token.Symbol.CHARCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.CHRCONST, charc.lexeme());
+				attrLoc.put(atom, charc);
+				return atom;
+			}
 			case STRINGCONST:
-				check(Token.Symbol.STRINGCONST);
-				return;
+				Token stringc = check(Token.Symbol.STRINGCONST);
+				AST.AtomExpr atom = new AST.AtomExpr(Type.STRCONST, stringc.lexeme());
+				attrLoc.put(atom, stringc);
+				return atom;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|const| Pricakovana konstanta, dobil " + lexAn.peekToken().symbol());
 		}
