@@ -198,186 +198,222 @@ public class SynAn implements AutoCloseable {
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST: {
 				AST.Expr expr = parseExpression();
-				parseExpression2();
-				AST.Stmt stmt = new AST.ExprStmt(expr);
+				AST.Stmt stmt = new AST.AssignStmt(expr, parseExpression2());
 				return stmt;
 			}
 			case IF: {
-				Token if = check(Token.Symbol.IF);
-				AST.Expr expr = parseExpression();
-				check(Token.Symbol.THEN);
-				parseStatements();
-				parseStatementElse();
-				check(Token.Symbol.END);
-				return;
+				Token token_if = check(Token.Symbol.IF);
+				AST.Expr condition = parseExpression();
+				Token then = check(Token.Symbol.THEN);
+				List<AST.Stmt> stmts = parseStatements();
+				List<AST.Stmt> stmtsElse = parseStatementElse();
+				Token end = check(Token.Symbol.END);
+				AST.IfStmt ifStmt = new AST.IfStmt(condition, stmts, stmtsElse);
+				return ifStmt;
 			}
 			case WHILE: {
-				check(Token.Symbol.WHILE);
-				parseExpression();
-				check(Token.Symbol.DO);
-				parseStatements();
-				check(Token.Symbol.END);
-				return;
+				Token whileToken = check(Token.Symbol.WHILE);
+				AST.Expr expr = parseExpression();
+				Token doToken = check(Token.Symbol.DO);
+				List<AST.Stmt> stmts = parseStatements();
+				Token endToken = check(Token.Symbol.END);
+				AST.Stmt stmt = new AST.WhileStmt(expr, stmts);
+				return stmt;
 			}
 			case LET: {
-				check(Token.Symbol.LET);
-				parseDefinicije();
-				check(Token.Symbol.IN);
-				parseStatements();
-				check(Token.Symbol.END);
-				return;
+				Token letToken = check(Token.Symbol.LET);
+				List<AST.MainDef> maindefs = parseDefinicije();
+				Token inToken = check(Token.Symbol.IN);
+				List<AST.Stmt> stmts = parseStatements();
+				Token endToken = check(Token.Symbol.END);
+				AST.LetStmt letstmt = new AST.LetStmt(maindefs, stmts);
+				return letstmt;
 			}
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|statement| Pricakovan je identifier, oklepaj, plus, minus, negacija, kazalec, konstante, if while ali let, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseStatementElse(){
+	private List<AST.Stmt> parseStatementElse(){
 		switch(lexAn.peekToken().symbol()){
 			case END:
-				return;
+				return null;
 			case ELSE:
-				check(Token.Symbol.ELSE);
-				parseStatements();
-				return;
+				Token elseToken = check(Token.Symbol.ELSE);
+				List<AST.Stmt> stmts = parseStatements();
+				return stmts;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|statementElse| Pricakovan end ali else, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseExpression2(){
+	private AST.Expr parseExpression2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR: case COMMA: case END: case IN: case ELSE: case EOF:
-				return;
+				return null;
 			case ASSIGN:
-				check(Token.Symbol.ASSIGN);
-				parseExpression();
-				return;
+				Token assign = check(Token.Symbol.ASSIGN);
+				AST.Expr expr = parseExpression();
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|expression2| Pricakovan fun, var, vejica, end, in, else, EOF ali =, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseDefinicije(){
+	private List<AST.MainDef> parseDefinicije(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR:
-				parseDefinition();
-				parseDefinicije2();
-				return;
+				AST.MainDef maindef = parseDefinition();
+				List<AST.MainDef> maindefs = parseDefinicije2();
+				if(maindefs == null){
+					maindefs = new ArrayList<AST.MainDef>();
+				}
+				maindefs.add(maindef);
+				return maindefs;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|definicije| Pricakovan fun ali var, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseDefinicije2(){
+	private List<AST.MainDef> parseDefinicije2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case VAR:
-				parseDefinicije();
-				return;
+				List<AST.MainDef> maindefs = parseDefinicije();
+				return maindefs;
 			case IN:
-				return;
+				return null;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|definicije2| Pricakovan fun, var ali in, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseExpression(){
+	private AST.Expr parseExpression(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseEAnd();
-				parseEOR();
-				return;
+				AST.BinExpr and = parseEAnd();
+				AST.BinExpr or = parseEOR();
+				if(or == null){
+					return and;
+				}
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.OR, and, or);
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|expression| Pricakovan identifier, oklepaj, plus, minus, negacija, kazalec ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEOR(){
+	private AST.BinExpr parseEOR(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case EOF:
-				return;
+				return null;
 			case OR:
-				check(Token.Symbol.OR);
-				parseEAnd();
-				parseEOR();
-				return;
+				Token or = check(Token.Symbol.OR);
+				AST.BinExpr and = parseEAnd();
+				AST.BinExpr or2 = parseEOR();
+				if(or2 == null){
+					return and;
+				}
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.OR, and, or2);
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eOR| Pricakuje se fun, zaklepaj, =, var, vejica, then, end, do, in, else, konec datoteke ali or, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEAnd(){
+	private AST.BinExpr parseEAnd(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseEComp();
-				parseEAnd2();
-				return;
+				AST.BinExpr comp = parseEComp();
+				AST.BinExpr and2 = parseEAnd2();
+				if(and2 == null){
+					return comp;
+				}
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.AND, comp, and2);
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eAnd| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEAnd2(){
+	private AST.BinExpr parseEAnd2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case EOF:
-				return;
+				return null;
 			case AND:
-				check(Token.Symbol.AND);
-				parseEComp();
-				parseEAnd2();
-				return;
+				Token and = check(Token.Symbol.AND);
+				AST.BinExpr comp = parseEComp();
+				AST.BinExpr and2 = parseEAnd2();
+				if(and2 == null){
+					return comp;
+				}
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.AND, comp, and2);
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eAnd2| Pricakuje se fun, zaklepaj, =, var, vejica, then, end, do, in, else, konec datoteke, or ali and, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEComp(){
+	private AST.BinExpr parseEComp(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseEAdit();
-				parseEComp2();
-				return;
+				AST.BinExpr adit = parseEAdit();
+				AST.BinExpr comp2 = parseEComp2();
+				if(comp2 == null){
+					return adit;
+				}
+				AST.BinExpr expr = new AST.BinExpr(comp2.oper, adit, comp2);
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eComp| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEComp2(){
+	private AST.BinExpr parseEComp2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF:
-				return;
-			case EQU:
-				check(Token.Symbol.EQU);
-				parseEAdit();
-				return;
-			case NEQ:
-				check(Token.Symbol.NEQ);
-				parseEAdit();
-				return;
-			case GTH:
-				check(Token.Symbol.GTH);
-				parseEAdit();
-				return;
-			case LTH:
-				check(Token.Symbol.LTH);
-				parseEAdit();
-				return;
-			case GEQ:
-				check(Token.Symbol.GEQ);
-				parseEAdit();
-				return;
-			case LEQ:
-				check(Token.Symbol.LEQ);
-				parseEAdit();
-				return;
+				return null;
+			case EQU:{
+				Token equ = check(Token.Symbol.EQU);
+				AST.BinExpr expr = parseEAdit();
+				return expr;
+			}
+			case NEQ: {
+				Token neq = check(Token.Symbol.NEQ);
+				AST.BinExpr expr = parseEAdit();
+				return expr;
+			}
+			case GTH: {
+				Token gth = check(Token.Symbol.GTH);
+				AST.BinExpr expr = parseEAdit();
+				return expr;
+			}
+			case LTH: {
+				Token lth = check(Token.Symbol.LTH);
+				AST.BinExpr expr = parseEAdit();
+				return expr;
+			}
+			case GEQ: {
+				Token geq = check(Token.Symbol.GEQ);
+				AST.BinExpr expr = parseEAdit();
+				return expr;
+			}
+			case LEQ: {
+				Token leq = check(Token.Symbol.LEQ);
+				AST.BinExpr expr = parseEAdit();
+				return expr;
+			}
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|eComp2| Pricakuje se fun, zaklepaj, =, var, vejica, then, end, do, in, else, or, and, EOF, ==, !=, >, <, >= ali <=, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEAdit(){
+	private AST.BinExpr parseEAdit(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseEMul();
-				parseEAdit2();
-				return;
+				AST.BinExpr mul = parseEMul();
+				AST.BinExpr adit2 = parseEAdit2();
+				if(adit2 == null){
+					return mul;
+				}
+				AST.BinExpr expr = new AST.BinExpr(adit2.oper, mul, adit2)
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eAdit| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEAdit2(){
+	private AST.BinExpr parseEAdit2(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF: case EQU: case NEQ: case GTH: case LTH: case GEQ: case LEQ:
-				return;
+				return null;
 			case ADD:
 				check(Token.Symbol.ADD);
 				parseEMul();
@@ -438,66 +474,63 @@ public class SynAn implements AutoCloseable {
 	private void parsePrefix(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parsePrefix2();
+				AST.UnExpr expr = parsePrefix2();
 				return;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|prefix| Pricakoval identifier, oklepaj, plus, minus, negacija, kazalec ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parsePrefix2(){
+	private AST.UnExpr parsePrefix2(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case INTCONST: case CHARCONST: case STRINGCONST:
-				return;
+				return null;
 			case ADD: case SUB: case NOT: case PTR:
-				parsePrefixOp();
-				parsePrefix2();
-				return;
+				AST.UnExpr.Oper oper = parsePrefixOp();
+				AST.UnExpr unExpr= parsePrefix2();
+				AST.UnExpr expr = new AST.UnExpr(oper, unExpr);
+				return expr;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|prefix2| Pricakovan prefix, identifier, okepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parsePrefixOp(){
+	private AST.UnExpr.Oper parsePrefixOp(){
 		switch(lexAn.peekToken().symbol()){
 			case ADD:
 				Token add = check(Token.Symbol.ADD);
-				return;
+				return AST.UnExpr.Oper.ADD;
 			case SUB:
-				check(Token.Symbol.SUB);
-				return;
+				Token sub = check(Token.Symbol.SUB);
+				return AST.UnExpr.Oper.SUB;
 			case NOT:
-				check(Token.Symbol.NOT);
-				return;
+				Token not = check(Token.Symbol.NOT);
+				return AST.UnExpr.Oper.NOT;
 			case PTR:
-				check(Token.Symbol.PTR);
-				return;
+				Token ptr = check(Token.Symbol.PTR);
+				return AST.UnExpr.Oper.MEMADDR;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|prefixOp| Pricakoval prefix, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private AST.Expr parseEPostfix(){
+	private AST.UnExpr parseEPostfix(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case INTCONST: case CHARCONST: case STRINGCONST:
 				AST.Expr expr = parseEKoncni();
-				AST.Expr expr2 = parsePostfix();
-				if(expr2 != null){
-
-				}
-				return expr;
+				AST.UnExpr.Oper expr2 = parsePostfix();
+				AST.UnExpr expression = new AST.UnExpr(expr2, expr);
+				return expression;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|ePostfix| Pricakovan identifier, oklepaj ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private AST.UnExpr parsePostfix(){
+	private AST.UnExpr.Oper parsePostfix(){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF: case EQU: case NEQ: case GTH: case LTH: case GEQ: case LEQ: case ADD: case SUB: case MUL: case DIV: case MOD:
 				return null;
 			case PTR:
 				Token ptr = check(Token.Symbol.PTR);
-				AST.UnExpr expr = parsePostfix();
-				if(expr == null){
-					expr = new AST.UnExpr(Oper.VALUEAT, expr);
-				}
-				return expr;
+				AST.UnExpr.Oper oper = parsePostfix();
+				if(oper == null) oper = AST.UnExpr.Oper.VALUEAT;
+				return oper;
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|postfix| Pricakovan kazalec ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
