@@ -62,23 +62,25 @@ public class SynAn implements AutoCloseable {
 	private AST.Nodes<AST.MainDef> parseProgram() {
 		switch(lexAn.peekToken().symbol()){
 			case FUN: {
-				AST.FunDef fun = parseDefinition();
+				AST.MainDef fun = parseDefinition();
 				List<AST.MainDef> maindef = parseDefinition2();
 				AST.Nodes<AST.MainDef> tmp;
 				if(maindef == null){
-					maindef.add(fun);
-					tmp = new AST.Nodes<AST.MainDef>(maindef);
+					maindef = new ArrayList<AST.MainDef>();
 				}
+				maindef.add(fun);
+				tmp = new AST.Nodes<AST.MainDef>(maindef);
 				return tmp;
 			}
 			case VAR: {
-				AST.VarDef var = parseDefinition();
+				AST.MainDef var = parseDefinition();
 				List<AST.MainDef> maindef = parseDefinition2();
 				AST.Nodes<AST.MainDef> tmp;
 				if(maindef == null){
-					maindef.add(var);
-					tmp = new AST.Nodes<AST.MainDef>(maindef);
+					maindef = new ArrayList<AST.MainDef>();
 				}
+				maindef.add(var);
+				tmp = new AST.Nodes<AST.MainDef>(maindef);
 				return tmp;
 			}
 			default:
@@ -404,7 +406,7 @@ public class SynAn implements AutoCloseable {
 				if(adit2 == null){
 					return mul;
 				}
-				AST.BinExpr expr = new AST.BinExpr(adit2.oper, mul, adit2)
+				AST.BinExpr expr = new AST.BinExpr(adit2.oper, mul, adit2);
 				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eAdit| Pricakuje se identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
@@ -414,68 +416,93 @@ public class SynAn implements AutoCloseable {
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF: case EQU: case NEQ: case GTH: case LTH: case GEQ: case LEQ:
 				return null;
-			case ADD:
-				check(Token.Symbol.ADD);
-				parseEMul();
-				parseEAdit2();
-				return;
-			case SUB:
-				check(Token.Symbol.SUB);
-				parseEMul();
-				parseEAdit2();
-				return;
+			case ADD: {
+				Token add = check(Token.Symbol.ADD);
+				AST.BinExpr mul = parseEMul();
+				AST.BinExpr adit2 = parseEAdit2();
+				if(adit2 == null) return mul;
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.ADD, mul, adit2);
+				return expr;
+			}
+			case SUB: {
+				Token sub = check(Token.Symbol.SUB);
+				AST.BinExpr mul = parseEMul();
+				AST.BinExpr adit2 = parseEAdit2();
+				if(adit2 == null) return mul;
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.SUB, mul, adit2);
+				return expr;
+			}
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|eAdit2| Pricakovan plus, sub ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEMul(){
+	private AST.Expr parseEMul(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parseEPrefix();
-				parseEMul2();
-				return;
+				AST.UnExpr prefix = parseEPrefix();
+				AST.BinExpr.Oper[] tipOperacije = new AST.BinExpr.Oper[1];
+				AST.Expr mul2 = parseEMul2(tipOperacije);
+				if(mul2 == null) return prefix;
+				AST.BinExpr expr = new AST.BinExpr(tipOperacije[0], prefix, mul2);
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|eMul| Pricakovan identifier, zaklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEMul2(){
+	private AST.Expr parseEMul2(AST.BinExpr.Oper[] tipOperacije){
 		switch(lexAn.peekToken().symbol()){
 			case FUN: case RPAREN: case ASSIGN: case VAR: case COMMA: case THEN: case END: case DO: case IN: case ELSE: case OR: case AND: case EOF: case EQU: case NEQ: case GTH: case LTH: case GEQ: case LEQ: case ADD: case SUB:
-				return;
-			case MUL:
-				check(Token.Symbol.MUL);
-				parseEPrefix();
-				parseEMul2();
-				return;
-			case DIV:
-				check(Token.Symbol.DIV);
-				parseEPrefix();
-				parseEMul2();
-				return;
-			case MOD:
-				check(Token.Symbol.MOD);
-				parseEPrefix();
-				parseEMul2();
-				return;
+				return null;
+			case MUL: {
+				Token mul = check(Token.Symbol.MUL);
+				AST.UnExpr prefix = parseEPrefix();
+				AST.Expr mul2= parseEMul2(null);
+				if(mul2 == null) return prefix;
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.MUL, prefix, mul2);
+				tipOperacije[0] = AST.BinExpr.Oper.MUL;
+				return expr;
+			}
+			case DIV: {
+				Token div = check(Token.Symbol.MUL);
+				AST.UnExpr prefix = parseEPrefix();
+				AST.Expr mul2= parseEMul2(null);
+				if(mul2 == null) return prefix;
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.DIV, prefix, mul2);
+				tipOperacije[0] = AST.BinExpr.Oper.MUL;
+				return expr;
+			}
+			case MOD: {
+				Token mod = check(Token.Symbol.MUL);
+				AST.UnExpr prefix = parseEPrefix();
+				AST.Expr mul2= parseEMul2(null);
+				if(mul2 == null) return prefix;
+				AST.BinExpr expr = new AST.BinExpr(AST.BinExpr.Oper.MOD, prefix, mul2);
+				tipOperacije[0] = AST.BinExpr.Oper.MUL;
+				return expr;
+			}
 			default: 
 				throw new Report.Error(lexAn.peekToken(), "|eMul2| Pricakovan *, /, % ali zacetek drugega stavka, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parseEPrefix(){
+	private AST.UnExpr parseEPrefix(){
 		switch(lexAn.peekToken().symbol()){
-			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
-				parsePrefix();
-				parseEPostfix();
-				return;
+			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST: {
+				AST.UnExpr prefix = parsePrefix();
+				AST.Expr postfix = parseEPostfix();
+				if(postfix == null) return prefix;
+				AST.UnExpr expr = new AST.UnExpr(prefix.oper, postfix);
+				return expr;
+			}
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|ePrefix| Pricakovan identifier, oklepaj, plus, minus, negacija, kazalec ali konstanta, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private void parsePrefix(){
+	private AST.UnExpr parsePrefix(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case ADD: case SUB: case NOT: case PTR: case INTCONST: case CHARCONST: case STRINGCONST:
 				AST.UnExpr expr = parsePrefix2();
-				return;
+				if(expr == null) return null;
+				return expr;
 			default:
 				throw new Report.Error(lexAn.peekToken(), "|prefix| Pricakoval identifier, oklepaj, plus, minus, negacija, kazalec ali konstanto, dobil " + lexAn.peekToken().symbol());
 		}
@@ -511,11 +538,12 @@ public class SynAn implements AutoCloseable {
 				throw new Report.Error(lexAn.peekToken(), "|prefixOp| Pricakoval prefix, dobil " + lexAn.peekToken().symbol());
 		}
 	}
-	private AST.UnExpr parseEPostfix(){
+	private AST.Expr parseEPostfix(){
 		switch(lexAn.peekToken().symbol()){
 			case IDENTIFIER: case LPAREN: case INTCONST: case CHARCONST: case STRINGCONST:
 				AST.Expr expr = parseEKoncni();
 				AST.UnExpr.Oper expr2 = parsePostfix();
+				if(expr2 == null) return expr;
 				AST.UnExpr expression = new AST.UnExpr(expr2, expr);
 				return expression;
 			default: 
