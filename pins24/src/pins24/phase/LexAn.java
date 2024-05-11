@@ -127,22 +127,14 @@ public class LexAn implements AutoCloseable {
 			nextChar();
 			if(buffChar == '\\' || buffChar == '\'' || buffChar == 'n' || (buffChar >= 'A' && buffChar <= 'F' || buffChar >= '0' && buffChar <= '9')){	//je veljaven backslash
 				if(buffChar >= 'A' && buffChar <= 'F' || buffChar >= '0' && buffChar <= '9'){
-					String znak = "" + (char) buffChar;
+					String znak = "\'\\" + (char) buffChar;
 					nextChar();
 					if(buffChar >= 'A' && buffChar <= 'F' || buffChar >= '0' && buffChar <= '9'){
 						znak += (char) buffChar;
-						int ascii = Integer.parseInt(znak, 16);
-						if(ascii >= 32 && ascii <= 126){
-							String pomozna_za_return = "" + (char) ascii;
-							nextChar();
-							if(buffChar == '\''){
-								return '\'' + pomozna_za_return + '\'';
-							}
-							else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-4, buffCharLine, buffCharColumn), "Character z hex vrednostjo se ne konca pravilno."); 
-						}
-						else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-4, buffCharLine, buffCharColumn), "Napacena reprezentacija HEX ascii vrednosti.");
 					}
-					else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-3, buffCharLine, buffCharColumn), "Napacno escapan string!");
+					else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-3, buffCharLine, buffCharColumn), "Napacno escapan char!");
+					znak += "\'";
+					return znak;
 				}
 				char tmp = (char) buffChar;
 				nextChar();
@@ -168,7 +160,6 @@ public class LexAn implements AutoCloseable {
 		nextChar();
 		while(buffChar != '"'){
 			if(buffChar >= 32 && buffChar <= 126){
-				String znak = "";
 				if(buffChar == '\\'){
 					tmp += (char) buffChar;
 					nextChar();
@@ -176,20 +167,16 @@ public class LexAn implements AutoCloseable {
 						throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-tmp.length(), buffCharLine, buffCharColumn), "Napacno escapan string!");
 					}
 					if(buffChar >= 'A' && buffChar <= 'F' || buffChar >= '0' && buffChar <= '9'){
-						znak = "" + (char) buffChar;
+						tmp += (char) buffChar;
 						nextChar();
 						if(buffChar >= 'A' && buffChar <= 'F' || buffChar >= '0' && buffChar <= '9'){
-							znak += (char) buffChar;
-							int ascii = Integer.parseInt(znak, 16);
-							if(ascii >= 32 && ascii <= 126){
-								tmp = tmp.substring(0, tmp.length()-1) + (char) ascii;
-							}
-							else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-tmp.length(), buffCharLine, buffCharColumn), "Napacena reprezentacija HEX ascii vrednosti.");
+							tmp += (char) buffChar;
 						}
 						else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-tmp.length(), buffCharLine, buffCharColumn), "Napacno escapan string!");
 					}
+					else tmp += (char) buffChar;
 				}
-				if(znak.length() < 1) tmp += (char) buffChar;
+				else tmp += (char) buffChar;
 			}
 			else throw new Report.Error(new Report.Location(buffCharLine, buffCharColumn-tmp.length(), buffCharLine, buffCharColumn), "Neprepoznan znak v stringu.");
 			nextChar();
