@@ -765,7 +765,7 @@ public class AST {
 		 * @param highlighted Ali mora biti izpis poudarjen.
 		 * @param node        Vozlisce abstraktnega sintaksnega drevesa.
 		 */
-		public void desc(int indent, final AST.Node node, final boolean highlighted) {
+		public void desc(final int indent, final AST.Node node, final boolean highlighted) {
 			return;
 		}
 
@@ -1223,7 +1223,8 @@ public class AST {
 
 			@Override
 			public Object visit(final AST.AtomExpr atomExpr, final Log log) {
-				print(log.indent, atomExpr, "\033[1m" + "AtomExpr " + atomExpr.value + "\033[0m");
+				print(log.indent, atomExpr,
+						"\033[1m" + "AtomExpr " + atomExpr.type + "(" + atomExpr.value + ")" + "\033[0m");
 				{
 				}
 				return null;
