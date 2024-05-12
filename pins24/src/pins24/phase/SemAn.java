@@ -2,6 +2,11 @@ package pins24.phase;
 
 import java.util.*;
 import pins24.common.*;
+import pins24.common.AST.AssignStmt;
+import pins24.common.AST.AtomExpr;
+import pins24.common.AST.BinExpr;
+import pins24.common.AST.UnExpr;
+import pins24.common.AST.VarExpr;
 
 /**
  * Semanticni analizator.
@@ -514,9 +519,41 @@ public class SemAn {
 		 * Obiskovalec za preverjanje levih vrednosti.
 		 */
 		private class ResolverVisitor implements AST.FullVisitor<Object, Object> {
+			@Override
+			public Object visit(final AssignStmt assignStmt, final Object arg) {
+				assignStmt.dstExpr.accept(this, arg);
+				assignStmt.srcExpr.accept(this, arg);
 
-			// TODO
+				if(attrAST.attrLVal.get(assignStmt.dstExpr) == null){
+					throw new Report.Error(attrAST.attrLoc.get(assignStmt.dstExpr), "DestExpr ni leva vrednost!");
+				}
+				return null;
+			}
 
+			@Override
+			public Object visit(final VarExpr varExpr, final Object arg) {
+				attrAST.attrLVal.put(varExpr, true);
+				return null;
+			}
+
+			@Override
+			public Object visit(final UnExpr unExpr, final Object arg) {
+				unExpr.expr.accept(this, arg);
+				if(unExpr.oper == AST.UnExpr.Oper.VALUEAT){
+					attrAST.attrLVal.put(unExpr, true);
+				}
+				if(unExpr.oper == AST.UnExpr.Oper.MEMADDR && attrAST.attrLVal.get(unExpr.expr) == null) {
+					throw new Report.Error(attrAST.attrLoc.get(unExpr), "Expression ni leva vrednost");
+				}
+				return null;
+			}
+
+			@Override
+			public Object visit(final BinExpr binExpr, final Object arg) {
+				binExpr.fstExpr.accept(this, arg);
+				binExpr.sndExpr.accept(this, arg);
+				return null;
+			}
 		}
 
 	}

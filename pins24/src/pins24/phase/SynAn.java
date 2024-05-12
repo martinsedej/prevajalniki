@@ -388,7 +388,7 @@ public class SynAn implements AutoCloseable {
 			case NEQ:{
 				check(Token.Symbol.NEQ);
 				AST.Expr adit = parseEAdit();
-				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.EQU, expr, adit);
+				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.NEQ, expr, adit);
 				attrLoc.put(comp, new Report.Location(attrLoc.get(expr), attrLoc.get(adit)));
 				return comp;
 			}
