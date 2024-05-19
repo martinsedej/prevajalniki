@@ -201,11 +201,76 @@ public class Memory {
 		/** Obiskovalec, ki izracuna pomnilnisko predstavitev. */
 		private class MemoryVisitor implements AST.FullVisitor<Object, Object> {
 
+			private int currentOffset;	//prva spremenljivka ima offset 12, neki z oznacevanjem funkcije, ter je negativen offset
+			private int paramOffset = 4;	//parametri so definirani pri klicu, torej pred FP (plus)
 			@SuppressWarnings({ "doclint:missing" })
 			public MemoryVisitor() {
 			}
 
+			@Override
+			public Object visit(final AST.FunDef funDef, final Object arg) {
+				currentOffset = -12;	//prva spremenljivka ima offset 12, neki z oznacevanjem funkcije, ter je negativen offset
+
+				funDef.pars.accept(this, null);
+				
+				// Allocate memory frame for the function
+				int paramsSize = funDef.pars.size() * 4; 
+				int stmtsSize = funDef.stmts.size() * 4;
+
+				Mem.Frame frame = new Mem.Frame(
+					funDef.name,
+					1,
+					paramsSize,
+					stmtsSize,
+					new LinkedList<Mem.RelAccess>(),
+					new LinkedList<Mem.RelAccess>() 
+				);	
+				attrAST.attrFrame.put(funDef, frame);
+
+				funDef.stmts.accept(this, null);
+				return null;
+			}
+
+			@Override
+			public Object visit(final AST.ParDef parDef, final Object arg) {
+				Mem.RelAccess paramAccess = new Mem.RelAccess(
+					currentOffset,
+					1, // Static depth for now, this may need adjustment
+					4, // Assuming each parameter is 4 bytes
+					null, // No initial values for parameters
+					parDef.name
+				);
+				attrAST.attrParAccess.put(parDef, paramAccess);
+				currentOffset += 4;
+				return null;
+			}
+
+			@Override
+			public Object visit(final AST.VarDef varDef, final Object arg) {
+				Mem.RelAccess varAccess = new Mem.RelAccess(
+					currentOffset,
+					1,
+					4,
+					null,
+					varDef.name
+				);
+				attrAST.attrVarAccess.put(varDef, varAccess);
+				currentOffset += 4;
+				return null;
+			}
+
+			@Override
+			public Object visit(final AST.LetStmt letStmt, final Object arg) {
+				letStmt.defs.accept(this, null);
+
+				letStmt.stmts.accept(this, null);
+				return null;
+			}
+
 		/*** TODO ***/
+		//string ma labelo, size, zacetno vrednost
+		//stringe se zapise kot "string\00", kjer mora \00 vpisat programer
+		//inti pa chari pa majo relativno pozicijo na zacetek kazalcnega sklada
 
 	}
 
@@ -329,4 +394,5 @@ public class Memory {
 		}
 	}
 
+}
 }
