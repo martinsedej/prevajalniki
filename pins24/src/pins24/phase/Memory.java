@@ -200,10 +200,9 @@ public class Memory {
 
 		/** Obiskovalec, ki izracuna pomnilnisko predstavitev. */
 		private class MemoryVisitor implements AST.FullVisitor<Object, Object> {
-			private int paramOffset = 4;
+			private int paramOffset;
 			private int currentOffset;
 			private int depth = 0;
-			private int functionVarSize = 0;
 			List<List<Mem.RelAccess>> varDefs = new ArrayList<List<Mem.RelAccess>>();
 			@SuppressWarnings({ "doclint:missing" })
 			public MemoryVisitor() {
@@ -211,10 +210,10 @@ public class Memory {
 
 			@Override
 			public Object visit(final AST.FunDef funDef, final Object arg) {
-				int tmp = functionVarSize;
-				functionVarSize = 0;
 				depth++;
+				currentOffset = -8;
 				int parsSize = 4;
+				int varsSize = 8;
 				List<Mem.RelAccess> debugPars = new ArrayList<Mem.RelAccess>();
 				varDefs.add(new ArrayList<Mem.RelAccess>());
 				funDef.pars.accept(this, null);
@@ -225,14 +224,16 @@ public class Memory {
 					debugPars.add(attrAST.attrParAccess.get(funDef.pars.get(i)));
 				}
 				List<Mem.RelAccess> debugVars = varDefs.removeLast();
-				for(int i = 0; i < debugVars.size(); i++){
-					functionVarSize += debugVars.get(i).size;
+				if(0 < funDef.name.compareTo("main")){
+					System.out.println(debugVars.size());
 				}
-				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, functionVarSize, debugPars, debugVars);
+				for(int i = 0; i < debugVars.size(); i++){
+					varsSize += debugVars.get(i).size;
+				}
+				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, varsSize, debugPars, debugVars);
 				attrAST.attrFrame.put(funDef, frame);
 				
 				depth--;
-				functionVarSize += tmp;
 				return null;
 			}
 
@@ -268,21 +269,19 @@ public class Memory {
 						}
 						default: {
 							size += num * (init.value.value.length()-4)*4;
-							//neki z labelami sam folk gatekeepa ker nevem, jih starši ne marajo
 							break;
 						}
 					}
 				}
-				functionVarSize += size;
 				if(depth == 0){
 					Mem.AbsAccess varAccess = new Mem.AbsAccess(varDef.name, size, inits);
 					attrAST.attrVarAccess.put(varDef, varAccess);
 				}
 				else {
+					currentOffset -= size;
 					Mem.RelAccess varAccess = new Mem.RelAccess(currentOffset, depth, size, inits, varDef.name);
 					attrAST.attrVarAccess.put(varDef, varAccess);
 					varDefs.getLast().add(varAccess);
-					currentOffset -= size;
 				}
 				return null;
 			}
@@ -314,7 +313,6 @@ public class Memory {
 
 			@Override
 			public Object visit(final AST.LetStmt letStmt, final Object arg) {
-				currentOffset = -12;
 				varDefs.add(new ArrayList<Mem.RelAccess>());
 				letStmt.defs.accept(this, null);
 
