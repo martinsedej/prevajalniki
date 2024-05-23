@@ -395,28 +395,28 @@ public class SynAn implements AutoCloseable {
 			case GTH:{
 				check(Token.Symbol.GTH);
 				AST.Expr adit = parseEAdit();
-				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.EQU, expr, adit);
+				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.GTH, expr, adit);
 				attrLoc.put(comp, new Report.Location(attrLoc.get(expr), attrLoc.get(adit)));
 				return comp;
 			}
 			case LTH:{
 				check(Token.Symbol.LTH);
 				AST.Expr adit = parseEAdit();
-				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.EQU, expr, adit);
+				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.LTH, expr, adit);
 				attrLoc.put(comp, new Report.Location(attrLoc.get(expr), attrLoc.get(adit)));
 				return comp;
 			}
 			case GEQ:{
 				check(Token.Symbol.GEQ);
 				AST.Expr adit = parseEAdit();
-				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.EQU, expr, adit);
+				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.GEQ, expr, adit);
 				attrLoc.put(comp, new Report.Location(attrLoc.get(expr), attrLoc.get(adit)));
 				return comp;
 			}
 			case LEQ:{
 				check(Token.Symbol.LEQ);
 				AST.Expr adit = parseEAdit();
-				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.EQU, expr, adit);
+				AST.BinExpr comp = new AST.BinExpr(AST.BinExpr.Oper.LEQ, expr, adit);
 				attrLoc.put(comp, new Report.Location(attrLoc.get(expr), attrLoc.get(adit)));
 				return comp;
 			}

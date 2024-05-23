@@ -203,7 +203,7 @@ public class Memory {
 			private int paramOffset;
 			private int currentOffset;
 			private int depth = 0;
-			List<List<Mem.RelAccess>> varDefs = new ArrayList<List<Mem.RelAccess>>();
+			List<Mem.RelAccess> varDefs = new ArrayList<Mem.RelAccess>();
 			@SuppressWarnings({ "doclint:missing" })
 			public MemoryVisitor() {
 			}
@@ -215,7 +215,8 @@ public class Memory {
 				int parsSize = 4;
 				int varsSize = 8;
 				List<Mem.RelAccess> debugPars = new ArrayList<Mem.RelAccess>();
-				varDefs.add(new ArrayList<Mem.RelAccess>());
+				List<Mem.RelAccess> backup = varDefs;
+				varDefs = new ArrayList<Mem.RelAccess>();
 				funDef.pars.accept(this, null);
 				paramOffset = 4;
 				funDef.stmts.accept(this, null);
@@ -223,16 +224,11 @@ public class Memory {
 					parsSize += 4;
 					debugPars.add(attrAST.attrParAccess.get(funDef.pars.get(i)));
 				}
-				List<Mem.RelAccess> debugVars = varDefs.removeLast();
-				if(0 < funDef.name.compareTo("main")){
-					System.out.println(debugVars.size());
-				}
-				for(int i = 0; i < debugVars.size(); i++){
-					varsSize += debugVars.get(i).size;
-				}
-				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, varsSize, debugPars, debugVars);
+				for(int i = 0; i < varDefs.size(); i++) varsSize += varDefs.get(i).size;
+				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, varsSize, debugPars, varDefs);
 				attrAST.attrFrame.put(funDef, frame);
 				
+				varDefs = backup;
 				depth--;
 				return null;
 			}
@@ -281,7 +277,7 @@ public class Memory {
 					currentOffset -= size;
 					Mem.RelAccess varAccess = new Mem.RelAccess(currentOffset, depth, size, inits, varDef.name);
 					attrAST.attrVarAccess.put(varDef, varAccess);
-					varDefs.getLast().add(varAccess);
+					varDefs.add(varAccess);
 				}
 				return null;
 			}
@@ -313,7 +309,6 @@ public class Memory {
 
 			@Override
 			public Object visit(final AST.LetStmt letStmt, final Object arg) {
-				varDefs.add(new ArrayList<Mem.RelAccess>());
 				letStmt.defs.accept(this, null);
 
 				letStmt.stmts.accept(this, null);
