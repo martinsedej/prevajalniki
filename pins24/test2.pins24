@@ -1,3 +1,10 @@
-var n = 0
-fun p() = 5+3,1
-fun d() = n = p(),1
+var x = 'a'
+fun a(b) = 
+    let 
+        fun c(i, j) = i = i + j, i
+        var d = 10
+        var k = 3
+    in
+        x = c(d, k)
+    end,
+    x

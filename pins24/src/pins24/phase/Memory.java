@@ -200,68 +200,122 @@ public class Memory {
 
 		/** Obiskovalec, ki izracuna pomnilnisko predstavitev. */
 		private class MemoryVisitor implements AST.FullVisitor<Object, Object> {
-
-			private int currentOffset;	//prva spremenljivka ima offset 12, neki z oznacevanjem funkcije, ter je negativen offset
-			private int paramOffset = 4;	//parametri so definirani pri klicu, torej pred FP (plus)
+			private int paramOffset = 4;
+			private int currentOffset;
+			private int depth = 0;
+			List<List<Mem.RelAccess>> varDefs = new ArrayList<List<Mem.RelAccess>>();
 			@SuppressWarnings({ "doclint:missing" })
 			public MemoryVisitor() {
 			}
 
 			@Override
 			public Object visit(final AST.FunDef funDef, final Object arg) {
-				currentOffset = -12;	//prva spremenljivka ima offset 12, neki z oznacevanjem funkcije, ter je negativen offset
-
+				int parsSize = 0;
+				int varsSize = 0;
+				List<Mem.RelAccess> debugPars = new ArrayList<Mem.RelAccess>();
 				funDef.pars.accept(this, null);
-				
-				// Allocate memory frame for the function
-				int paramsSize = funDef.pars.size() * 4; 
-				int stmtsSize = funDef.stmts.size() * 4;
-
-				Mem.Frame frame = new Mem.Frame(
-					funDef.name,
-					1,
-					paramsSize,
-					stmtsSize,
-					new LinkedList<Mem.RelAccess>(),
-					new LinkedList<Mem.RelAccess>() 
-				);	
-				attrAST.attrFrame.put(funDef, frame);
-
+				paramOffset = 4;
 				funDef.stmts.accept(this, null);
+				for(int i = 0; i < funDef.pars.size(); i++){
+					parsSize += 4;
+					debugPars.add(attrAST.attrParAccess.get(funDef.pars.get(i)));
+				}
+				List<Mem.RelAccess> debugVars = varDefs.removeLast();
+				for(int i = 0; i < debugVars.size(); i++){
+					varsSize += debugVars.get(i).size;
+				}
+				
+				// pridobi velikost parametrov
+				//pridobi velikost statementov
+				//ce je depth > 0 naredi ustrezno prevezo FP
+				//drugace normalno
+				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, varsSize, debugPars, debugVars);
+				attrAST.attrFrame.put(funDef, frame);
+				
 				return null;
 			}
 
 			@Override
 			public Object visit(final AST.ParDef parDef, final Object arg) {
 				Mem.RelAccess paramAccess = new Mem.RelAccess(
-					currentOffset,
-					1, // Static depth for now, this may need adjustment
+					paramOffset,
+					depth, // Static depth for now, this may need adjustment
 					4, // Assuming each parameter is 4 bytes
 					null, // No initial values for parameters
 					parDef.name
 				);
 				attrAST.attrParAccess.put(parDef, paramAccess);
-				currentOffset += 4;
+				paramOffset += 4;
 				return null;
 			}
 
 			@Override
 			public Object visit(final AST.VarDef varDef, final Object arg) {
-				Mem.RelAccess varAccess = new Mem.RelAccess(
-					currentOffset,
-					1,
-					4,
-					null,
-					varDef.name
-				);
-				attrAST.attrVarAccess.put(varDef, varAccess);
-				currentOffset += 4;
+				int size = 0;
+				Vector<Integer> inits = initsToArray(varDef.inits);
+				for(int i = 0; i < varDef.inits.size(); i++){
+					AST.Init init = (AST.Init) varDef.inits.get(i);
+					int num = Integer.parseInt(init.num.value);
+					switch(init.value.type){
+						case AST.AtomExpr.Type.INTCONST: {
+							size += num*4;
+							break;
+						}
+						case AST.AtomExpr.Type.CHRCONST: {
+							size += num*4;
+							break;
+						}
+						default: {
+							size += num * (init.value.value.length()-3)*4;
+							//neki z labelami sam folk gatekeepa ker nevem, jih starši ne marajo
+							break;
+						}
+					}
+				}
+				if(depth == 0){
+					Mem.AbsAccess varAccess = new Mem.AbsAccess(varDef.name, size, inits);
+					attrAST.attrVarAccess.put(varDef, varAccess);
+				}
+				else {
+					Mem.RelAccess varAccess = new Mem.RelAccess(currentOffset, depth, size, inits, varDef.name);
+					attrAST.attrVarAccess.put(varDef, varAccess);
+					varDefs.getLast().add(varAccess);
+					currentOffset -= size;
+				}
 				return null;
+			}
+			Vector<Integer> initsToArray(AST.Nodes<AST.Init> inits){
+				Vector<Integer> ints = new Vector<Integer>();
+				ints.add(inits.size());
+				for(int i = 0; i < inits.size(); i++){
+					AST.Init init = (AST.Init) inits.get(i);
+					ints.add(Integer.parseInt(init.num.value)); //kolkrat se ponovi
+					switch(init.value.type){
+						case AST.AtomExpr.Type.STRCONST: {
+							ints.addAll(decodeStrConst(init.value, null));
+							break;
+						}
+						case AST.AtomExpr.Type.INTCONST: {
+							ints.add(1);
+							ints.add(decodeIntConst(init.value, null));
+							break;
+						}
+						default: {
+							ints.add(1);
+							ints.add(decodeChrConst(init.value, null));
+						}
+					}
+				}
+				return ints;
 			}
 
 			@Override
 			public Object visit(final AST.LetStmt letStmt, final Object arg) {
+				currentOffset = -12;
+				varDefs.add(new ArrayList<Mem.RelAccess>());
+				depth++;
 				letStmt.defs.accept(this, null);
+				depth--;
 
 				letStmt.stmts.accept(this, null);
 				return null;

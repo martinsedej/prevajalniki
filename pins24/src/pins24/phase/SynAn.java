@@ -741,6 +741,7 @@ public class SynAn implements AutoCloseable {
 				AST.AtomExpr atom = new AST.AtomExpr(AST.AtomExpr.Type.CHRCONST, c.lexeme());
 				attrLoc.put(atom, c);
 				AST.Init init = new AST.Init(new AST.AtomExpr(AST.AtomExpr.Type.INTCONST, "1"), atom);
+				attrLoc.put(init, c);
 				return init;
 			}
 			case STRINGCONST: {
@@ -748,6 +749,7 @@ public class SynAn implements AutoCloseable {
 				AST.AtomExpr atom = new AST.AtomExpr(AST.AtomExpr.Type.STRCONST, c.lexeme());
 				attrLoc.put(atom, c);
 				AST.Init init = new AST.Init(new AST.AtomExpr(AST.AtomExpr.Type.INTCONST, "1"), atom);
+				attrLoc.put(init, c);
 				return init;
 			}
 			default: 
