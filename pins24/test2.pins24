@@ -1,10 +1,19 @@
-var x = 'a'
-fun a(b) = 
-    let 
-        fun c(i, j) = i = i + j, i
-        var d = 10
-        var k = 3
-    in
-        x = c(d, k)
-    end,
-    x
+fun main() =
+	let
+		var n = 0
+		var s = "ABC\00"
+		fun inc(m) =
+		    let
+		        var ma = 3
+		        var ss = "Niz\00"
+		        fun f(a) = a + 1
+		    in
+		        m = "Beseda",
+		        f(3)
+		    end
+	in
+		n = "CDE\00",
+		inc(n+3)
+	end
+var a = 3,4,5
+var b = "Blok\00"

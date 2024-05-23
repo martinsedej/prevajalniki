@@ -203,6 +203,7 @@ public class Memory {
 			private int paramOffset = 4;
 			private int currentOffset;
 			private int depth = 0;
+			private int functionVarSize = 0;
 			List<List<Mem.RelAccess>> varDefs = new ArrayList<List<Mem.RelAccess>>();
 			@SuppressWarnings({ "doclint:missing" })
 			public MemoryVisitor() {
@@ -210,9 +211,12 @@ public class Memory {
 
 			@Override
 			public Object visit(final AST.FunDef funDef, final Object arg) {
-				int parsSize = 0;
-				int varsSize = 0;
+				int tmp = functionVarSize;
+				functionVarSize = 0;
+				depth++;
+				int parsSize = 4;
 				List<Mem.RelAccess> debugPars = new ArrayList<Mem.RelAccess>();
+				varDefs.add(new ArrayList<Mem.RelAccess>());
 				funDef.pars.accept(this, null);
 				paramOffset = 4;
 				funDef.stmts.accept(this, null);
@@ -222,16 +226,13 @@ public class Memory {
 				}
 				List<Mem.RelAccess> debugVars = varDefs.removeLast();
 				for(int i = 0; i < debugVars.size(); i++){
-					varsSize += debugVars.get(i).size;
+					functionVarSize += debugVars.get(i).size;
 				}
-				
-				// pridobi velikost parametrov
-				//pridobi velikost statementov
-				//ce je depth > 0 naredi ustrezno prevezo FP
-				//drugace normalno
-				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, varsSize, debugPars, debugVars);
+				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, functionVarSize, debugPars, debugVars);
 				attrAST.attrFrame.put(funDef, frame);
 				
+				depth--;
+				functionVarSize += tmp;
 				return null;
 			}
 
@@ -266,12 +267,13 @@ public class Memory {
 							break;
 						}
 						default: {
-							size += num * (init.value.value.length()-3)*4;
+							size += num * (init.value.value.length()-4)*4;
 							//neki z labelami sam folk gatekeepa ker nevem, jih starši ne marajo
 							break;
 						}
 					}
 				}
+				functionVarSize += size;
 				if(depth == 0){
 					Mem.AbsAccess varAccess = new Mem.AbsAccess(varDef.name, size, inits);
 					attrAST.attrVarAccess.put(varDef, varAccess);
@@ -286,12 +288,13 @@ public class Memory {
 			}
 			Vector<Integer> initsToArray(AST.Nodes<AST.Init> inits){
 				Vector<Integer> ints = new Vector<Integer>();
-				ints.add(inits.size());
+				ints.add(inits.size()); //kolk initializatorjev mam
 				for(int i = 0; i < inits.size(); i++){
 					AST.Init init = (AST.Init) inits.get(i);
 					ints.add(Integer.parseInt(init.num.value)); //kolkrat se ponovi
 					switch(init.value.type){
 						case AST.AtomExpr.Type.STRCONST: {
+							ints.add(init.value.value.length()-4);
 							ints.addAll(decodeStrConst(init.value, null));
 							break;
 						}
@@ -313,9 +316,7 @@ public class Memory {
 			public Object visit(final AST.LetStmt letStmt, final Object arg) {
 				currentOffset = -12;
 				varDefs.add(new ArrayList<Mem.RelAccess>());
-				depth++;
 				letStmt.defs.accept(this, null);
-				depth--;
 
 				letStmt.stmts.accept(this, null);
 				return null;
