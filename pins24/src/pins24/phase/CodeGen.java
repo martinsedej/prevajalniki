@@ -2,6 +2,7 @@ package pins24.phase;
 
 import java.util.*;
 import pins24.common.*;
+import pins24.common.PDM.DataInstr;
 
 /**
  * Generiranje kode.
@@ -166,8 +167,17 @@ public class CodeGen {
 			}
 
 		    /*** TODO ***/
-
-		}
+			@Override
+			public List<PDM.CodeInstr> visit(AST.VarDef varDef, Mem.Frame arg){
+				List<DataInstr> dataInstr = new ArrayList<DataInstr>();
+				Mem.RelAccess access = attrAST.attrVarAccess.get(varDef); //kle rabm dodat neko preverjanje a je absAccess al rel in pravilno castat
+				dataInstr.add(new PDM.LABEL(access.debugName, null));
+				for(int i = 0; i < access.inits.size(); i++){
+					dataInstr.add(new PDM.DATA(access.inits.get(i), null));
+				}
+				attrAST.attrData.put(varDef, dataInstr);
+				return null;
+			}
 
 	}
 
@@ -391,4 +401,4 @@ public class CodeGen {
 		}
 	}
 
-}
+}}
