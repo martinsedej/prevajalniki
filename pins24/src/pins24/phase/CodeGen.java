@@ -179,7 +179,6 @@ public class CodeGen {
 			}
 
 		    /*** TODO ***/
-			//parametre po vrednosti, stringe po naslovu
 			
 			@Override
 			public List<PDM.CodeInstr> visit(final Nodes<? extends AST.Node> nodes, final Mem.Frame arg) {
@@ -197,33 +196,42 @@ public class CodeGen {
 
 			@Override
 			public List<PDM.CodeInstr> visit(final FunDef funDef, final Mem.Frame arg) {
+				if(funDef.stmts.size() == 0) return new ArrayList<CodeInstr>();
 				Mem.Frame frame = attrAST.attrFrame.get(funDef);
+				
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
-				code.add(new PDM.LABEL(funDef.name,null));
-				//ret.add(new PDM.PUSH(4-frame.parsSize,null));
+				code.add(new PDM.LABEL(frame.name,null));
 				code.add(new PDM.PUSH(8-frame.varsSize,null));
 				code.add(new PDM.POPN(null));
-				code.addAll(funDef.pars.accept(this, null));
-				code.addAll(funDef.stmts.accept(this, null));
+				code.addAll(funDef.pars.accept(this, frame));
+				code.addAll(funDef.stmts.accept(this, frame));
 				code.add(new PDM.PUSH(frame.parsSize - 4,null));
 				code.add(new PDM.RETN(frame, null));
+				//System.out.println("delam " + frame.name);
+
 				attrAST.attrCode.put(funDef, code);
-				return code;
+				return new ArrayList<PDM.CodeInstr>();
 			}
 
 			@Override
 			public List<PDM.CodeInstr> visit(final AST.CallExpr callExpr, final Mem.Frame arg){
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				AST.FunDef funDef = (AST.FunDef) attrAST.attrDef.get(callExpr);
+				Mem.Frame funDefFrame = attrAST.attrFrame.get(funDef);
 				//pushas gor argumente
-				
+				for(int i = callExpr.args.size()-1; i >= 0; i--){
+					code.addAll(callExpr.args.get(i).accept(this, arg));
+				}
 				//regn.fp
 				code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
-				//load ??
-				code.add(new PDM.LOAD(null));
-				//name funkcije
-				code.add(new PDM.NAME(callExpr.name, null));
+				for(int i = 0; i < arg.depth - funDefFrame.depth +1; i++){
+					code.add(new PDM.LOAD(null));
+				}
+				code.add(new PDM.NAME(funDefFrame.name, null));
+
 				//call
 				code.add(new PDM.CALL(arg, null));
+
 				attrAST.attrCode.put(callExpr, code);
 				return code;
 			}
@@ -233,23 +241,33 @@ public class CodeGen {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
 				Mem.Access access = attrAST.attrVarAccess.get(attrAST.attrDef.get(varExpr));
 				
-				if(access == null){	//torej je parameter i guess
+				if(access != null){
+					if(access instanceof Mem.AbsAccess){
+						code.add(new PDM.NAME(varExpr.name, null));
+						code.add(new PDM.LOAD(null));
+					}
+					else {
+						code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
+						for(int i = 0; i < arg.depth - ((Mem.RelAccess) access).depth; i++){
+							code.add(new PDM.LOAD(null));
+						}
+						code.add(new PDM.PUSH(((Mem.RelAccess)access).offset, null));
+						code.add(new PDM.OPER(PDM.OPER.Oper.ADD, null));
+						code.add(new PDM.LOAD(null));
+					}
+				}
+				else {
 					access = attrAST.attrParAccess.get(attrAST.attrDef.get(varExpr));
-				}
-				if(access instanceof Mem.AbsAccess){
-					code.add(new PDM.LABEL(varExpr.name, null));
-					code.add(new PDM.LOAD(null));
-				}
-				else if(access instanceof Mem.RelAccess){
 					code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
+					for(int i = 0; i < arg.depth - ((Mem.RelAccess) access).depth; i++){
+						code.add(new PDM.LOAD(null));
+					}
 					code.add(new PDM.PUSH(((Mem.RelAccess)access).offset, null));
 					code.add(new PDM.OPER(PDM.OPER.Oper.ADD, null));
+					code.add(new PDM.LOAD(null));
 				}
-
 				return code;
 			}
-
-			
 
 			@Override
 			public List<PDM.CodeInstr> visit(AST.VarDef varDef, Mem.Frame arg){
@@ -266,9 +284,11 @@ public class CodeGen {
 					code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
 					code.add(new PDM.PUSH(access.offset, null));
 					code.add(new PDM.OPER(PDM.OPER.Oper.ADD, null));
-					code.add(new PDM.LABEL(anonString, null));
+					code.add(new PDM.NAME(anonString, null));
 					code.add(new PDM.INIT(null));
 
+					attrAST.attrCode.put(varDef, code);
+					attrAST.attrData.put(varDef, data);
 					return code;
 				}
 				else {
@@ -327,7 +347,6 @@ public class CodeGen {
 				}
 			}
 
-
 			@Override
 			public List<PDM.CodeInstr> visit(final Init init, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
@@ -346,8 +365,10 @@ public class CodeGen {
 			@Override
 			public List<PDM.CodeInstr> visit(final AssignStmt assignStmt, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
-				code.addAll(assignStmt.dstExpr.accept(this, arg));
 				code.addAll(assignStmt.srcExpr.accept(this, arg));
+				code.addAll(assignStmt.dstExpr.accept(this, arg));
+				code.removeLast();
+				code.add(new PDM.SAVE(null));
 				attrAST.attrCode.put(assignStmt, code);
 				return code;
 			}
@@ -355,9 +376,20 @@ public class CodeGen {
 			@Override
 			public List<PDM.CodeInstr> visit(final IfStmt ifStmt, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				String ifTrue = "ifTrue" + String.valueOf(labelCounter);
+				String ifFalse = "ifFalse" + String.valueOf(labelCounter);
+				String end = "end" + String.valueOf(labelCounter++);
 				code.addAll(ifStmt.cond.accept(this, arg));
+				code.add(new PDM.NAME(ifTrue, null));
+				code.add(new PDM.NAME(ifFalse, null));
+				code.add(new PDM.CJMP(null));
+				code.add(new PDM.LABEL(ifTrue, null));
 				code.addAll(ifStmt.thenStmts.accept(this, arg));
+				code.add(new PDM.NAME(end, null));
+				code.add(new PDM.UJMP(null));
+				code.add(new PDM.LABEL(ifFalse, null));
 				code.addAll(ifStmt.elseStmts.accept(this, arg));
+				code.add(new PDM.LABEL(end, null));
 				attrAST.attrCode.put(ifStmt, code);
 				return code;
 			}
@@ -365,8 +397,20 @@ public class CodeGen {
 			@Override
 			public List<PDM.CodeInstr> visit(final WhileStmt whileStmt, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				String condition = "condition" + String.valueOf(labelCounter);
+				String loop = "loop" + String.valueOf(labelCounter);
+				String end = "end" + String.valueOf(labelCounter++);
+
+				code.add(new PDM.LABEL(condition, null));
 				code.addAll(whileStmt.cond.accept(this, arg));
+				code.add(new PDM.NAME(loop, null));
+				code.add(new PDM.NAME(end, null));
+				code.add(new PDM.CJMP(null));
+				code.add(new PDM.LABEL(loop, null));
 				code.addAll(whileStmt.stmts.accept(this, arg));
+				code.add(new PDM.NAME(condition, null));
+				code.add(new PDM.UJMP(null));
+				code.add(new PDM.LABEL(end, null));
 				attrAST.attrCode.put(whileStmt, code);
 				return code;
 			}
@@ -383,6 +427,15 @@ public class CodeGen {
 			public List<PDM.CodeInstr> visit(final UnExpr unExpr, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
 				code.addAll(unExpr.expr.accept(this, arg));
+				switch(unExpr.oper){
+					case NOT: code.add(new PDM.OPER(PDM.OPER.Oper.NOT, null)); break;
+					case SUB: 
+						code.add(new PDM.PUSH(-1, null));
+						code.add(new PDM.OPER(PDM.OPER.Oper.MUL, null)); 
+						break;
+					case MEMADDR: code.removeLast(); break;
+					case VALUEAT: code.add(new PDM.LOAD(null));
+				}
 				attrAST.attrCode.put(unExpr, code);
 				return code;
 			}
@@ -405,13 +458,40 @@ public class CodeGen {
 					case DIV:
 						code.add(new PDM.OPER(PDM.OPER.Oper.DIV, null));
 						break;
-						//TODO:
+					case MOD:
+						code.add(new PDM.OPER(PDM.OPER.Oper.MOD, null));
+						break;
+					case EQU:
+						code.add(new PDM.OPER(PDM.OPER.Oper.EQU, null));
+						break;
+					case NEQ:
+						code.add(new PDM.OPER(PDM.OPER.Oper.NEQ, null));
+						break;
+					case LTH:
+						code.add(new PDM.OPER(PDM.OPER.Oper.LTH, null));
+						break;
+					case GTH:
+						code.add(new PDM.OPER(PDM.OPER.Oper.GTH, null));
+						break;
+					case GEQ:
+						code.add(new PDM.OPER(PDM.OPER.Oper.GEQ, null));
+						break;
+					case LEQ:
+						code.add(new PDM.OPER(PDM.OPER.Oper.LEQ, null));
+						break;
+					case OR:
+						code.add(new PDM.OPER(PDM.OPER.Oper.OR, null));
+						break;
+					case AND:
+						code.add(new PDM.OPER(PDM.OPER.Oper.AND, null));
+						break;
 					default:
 						break;
 				}
 				attrAST.attrCode.put(binExpr, code);
 				return code;
 			}
+	}
 	}
 
 	/**
@@ -634,4 +714,4 @@ public class CodeGen {
 		}
 	}
 
-}}
+}

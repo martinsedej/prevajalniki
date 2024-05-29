@@ -200,9 +200,11 @@ public class Memory {
 
 		/** Obiskovalec, ki izracuna pomnilnisko predstavitev. */
 		private class MemoryVisitor implements AST.FullVisitor<Object, Object> {
-			private int paramOffset;
+			private int paramOffset = 4;
 			private int currentOffset;
 			private int depth = 0;
+			private String name = "";
+			HashMap<String, String> imenaFunkcij = new HashMap<>();
 			List<Mem.RelAccess> varDefs = new ArrayList<Mem.RelAccess>();
 			@SuppressWarnings({ "doclint:missing" })
 			public MemoryVisitor() {
@@ -211,6 +213,15 @@ public class Memory {
 			@Override
 			public Object visit(final AST.FunDef funDef, final Object arg) {
 				depth++;
+				if(name.isEmpty()) name = funDef.name;
+				else name += "." + funDef.name;
+				if(imenaFunkcij.containsKey(name)){
+					name += ",1";
+					imenaFunkcij.put(name, "name");
+				}
+				else {
+					imenaFunkcij.put(name, "name");
+				}
 				currentOffset = -8;
 				int parsSize = 4;
 				int varsSize = 8;
@@ -225,11 +236,16 @@ public class Memory {
 					debugPars.add(attrAST.attrParAccess.get(funDef.pars.get(i)));
 				}
 				for(int i = 0; i < varDefs.size(); i++) varsSize += varDefs.get(i).size;
-				Mem.Frame frame = new Mem.Frame(funDef.name, depth, parsSize, varsSize, debugPars, varDefs);
+				Mem.Frame frame = new Mem.Frame(name, depth, parsSize, varsSize, debugPars, varDefs);
 				attrAST.attrFrame.put(funDef, frame);
 				
 				varDefs = backup;
 				depth--;
+				int lastIndex = name.lastIndexOf('.');
+				if (lastIndex != -1) {
+					name = name.substring(0, lastIndex);
+				}
+				else name = "";
 				return null;
 			}
 
@@ -316,9 +332,6 @@ public class Memory {
 			}
 
 		/*** TODO ***/
-		//string ma labelo, size, zacetno vrednost
-		//stringe se zapise kot "string\00", kjer mora \00 vpisat programer
-		//inti pa chari pa majo relativno pozicijo na zacetek kazalcnega sklada
 
 	}
 }
