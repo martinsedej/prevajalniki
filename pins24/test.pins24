@@ -1,1 +1,6 @@
-var a = 'x'
+var x = "abc\00"
+
+fun main() = 
+    inc("abc\\0")
+
+fun inc(m) = m

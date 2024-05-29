@@ -2,6 +2,17 @@ package pins24.phase;
 
 import java.util.*;
 import pins24.common.*;
+import pins24.common.AST.AssignStmt;
+import pins24.common.AST.BinExpr;
+import pins24.common.AST.ExprStmt;
+import pins24.common.AST.FunDef;
+import pins24.common.AST.IfStmt;
+import pins24.common.AST.Init;
+import pins24.common.AST.LetStmt;
+import pins24.common.AST.Nodes;
+import pins24.common.AST.ParDef;
+import pins24.common.AST.UnExpr;
+import pins24.common.AST.WhileStmt;
 import pins24.common.PDM.CodeInstr;
 import pins24.common.PDM.DataInstr;
 
@@ -171,27 +182,74 @@ public class CodeGen {
 			//parametre po vrednosti, stringe po naslovu
 			
 			@Override
-			public List<PDM.CodeInstr> visit(final AST.FunDef funDef, final Mem.Frame arg){
-				funDef.pars.accept(this, null);
-				funDef.stmts.accept(this, null); //propagacija naprej
-
+			public List<PDM.CodeInstr> visit(final Nodes<? extends AST.Node> nodes, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
-
-				for(int i = 0; i < funDef.stmts.size(); i++) {
-					code.addAll(attrAST.attrCode.get(funDef.stmts.get(i))); //dodam kodo od vsakega statementa funkcije
-				}
+				for (final AST.Node node : nodes)
+					code.addAll(node.accept(this, arg));
 				return code;
 			}
 
 			@Override
-			public List<PDM.CodeInstr> visit(final AST.AssignStmt stmt, final Mem.Frame arg){
+			public List<PDM.CodeInstr> visit(final ParDef parDef, final Mem.Frame arg) {
 				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
-				stmt.srcExpr.accept(this, null);
-				stmt.dstExpr.accept(this, null);
+				return code;
+			}
 
+			@Override
+			public List<PDM.CodeInstr> visit(final FunDef funDef, final Mem.Frame arg) {
+				Mem.Frame frame = attrAST.attrFrame.get(funDef);
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.add(new PDM.LABEL(funDef.name,null));
+				//ret.add(new PDM.PUSH(4-frame.parsSize,null));
+				code.add(new PDM.PUSH(8-frame.varsSize,null));
+				code.add(new PDM.POPN(null));
+				code.addAll(funDef.pars.accept(this, null));
+				code.addAll(funDef.stmts.accept(this, null));
+				code.add(new PDM.PUSH(frame.parsSize - 4,null));
+				code.add(new PDM.RETN(frame, null));
+				attrAST.attrCode.put(funDef, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final AST.CallExpr callExpr, final Mem.Frame arg){
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				//pushas gor argumente
+				
+				//regn.fp
+				code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
+				//load ??
+				code.add(new PDM.LOAD(null));
+				//name funkcije
+				code.add(new PDM.NAME(callExpr.name, null));
+				//call
+				code.add(new PDM.CALL(arg, null));
+				attrAST.attrCode.put(callExpr, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final AST.VarExpr varExpr, final Mem.Frame arg){
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				Mem.Access access = attrAST.attrVarAccess.get(attrAST.attrDef.get(varExpr));
+				
+				if(access == null){	//torej je parameter i guess
+					access = attrAST.attrParAccess.get(attrAST.attrDef.get(varExpr));
+				}
+				if(access instanceof Mem.AbsAccess){
+					code.add(new PDM.LABEL(varExpr.name, null));
+					code.add(new PDM.LOAD(null));
+				}
+				else if(access instanceof Mem.RelAccess){
+					code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
+					code.add(new PDM.PUSH(((Mem.RelAccess)access).offset, null));
+					code.add(new PDM.OPER(PDM.OPER.Oper.ADD, null));
+				}
 
 				return code;
 			}
+
+			
 
 			@Override
 			public List<PDM.CodeInstr> visit(AST.VarDef varDef, Mem.Frame arg){
@@ -235,6 +293,125 @@ public class CodeGen {
 				}
 			}
 
+			@Override
+			public List<CodeInstr> visit(AST.AtomExpr atomExpr, Mem.Frame arg){
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				List<PDM.DataInstr> data = new ArrayList<PDM.DataInstr>();
+
+				switch(atomExpr.type){
+					case AST.AtomExpr.Type.INTCONST:{
+						code.add(new PDM.PUSH(Integer.parseInt(atomExpr.value), null));
+						attrAST.attrCode.put(atomExpr, code);
+						return code;
+					}
+					case AST.AtomExpr.Type.CHRCONST:{
+						code.add(new PDM.PUSH(Integer.parseInt(atomExpr.value), null));
+						attrAST.attrCode.put(atomExpr, code);
+						return code;
+					}
+					case AST.AtomExpr.Type.STRCONST:{
+						String label = ":" + labelCounter;
+						labelCounter++;
+						data.add(new PDM.LABEL(label, null));
+						Vector<Integer> inits = Memory.decodeStrConst(atomExpr, null);
+						for(int i = 0; i < inits.size(); i++){
+							data.add(new PDM.DATA(inits.get(i), null));
+						}
+						code.add(new PDM.NAME(label, null));
+						attrAST.attrData.put(atomExpr, data);
+						attrAST.attrCode.put(atomExpr, code);
+						return code;
+					}
+					default:
+						return null;
+				}
+			}
+
+
+			@Override
+			public List<PDM.CodeInstr> visit(final Init init, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final ExprStmt exprStmt, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(exprStmt.expr.accept(this, arg));
+				attrAST.attrCode.put(exprStmt, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final AssignStmt assignStmt, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(assignStmt.dstExpr.accept(this, arg));
+				code.addAll(assignStmt.srcExpr.accept(this, arg));
+				attrAST.attrCode.put(assignStmt, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final IfStmt ifStmt, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(ifStmt.cond.accept(this, arg));
+				code.addAll(ifStmt.thenStmts.accept(this, arg));
+				code.addAll(ifStmt.elseStmts.accept(this, arg));
+				attrAST.attrCode.put(ifStmt, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final WhileStmt whileStmt, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(whileStmt.cond.accept(this, arg));
+				code.addAll(whileStmt.stmts.accept(this, arg));
+				attrAST.attrCode.put(whileStmt, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final LetStmt letStmt, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(letStmt.defs.accept(this, arg));
+				code.addAll(letStmt.stmts.accept(this, arg));
+				attrAST.attrCode.put(letStmt, code);
+				return code;
+			}
+			@Override
+			public List<PDM.CodeInstr> visit(final UnExpr unExpr, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(unExpr.expr.accept(this, arg));
+				attrAST.attrCode.put(unExpr, code);
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final BinExpr binExpr, final Mem.Frame arg) {
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				code.addAll(binExpr.fstExpr.accept(this, arg));
+				code.addAll(binExpr.sndExpr.accept(this, arg));
+				switch (binExpr.oper) {
+					case ADD:
+						code.add(new PDM.OPER(PDM.OPER.Oper.ADD, null));
+						break;
+					case SUB:
+						code.add(new PDM.OPER(PDM.OPER.Oper.SUB, null));
+						break;
+					case MUL:
+						code.add(new PDM.OPER(PDM.OPER.Oper.MUL, null));
+						break;
+					case DIV:
+						code.add(new PDM.OPER(PDM.OPER.Oper.DIV, null));
+						break;
+						//TODO:
+					default:
+						break;
+				}
+				attrAST.attrCode.put(binExpr, code);
+				return code;
+			}
 	}
 
 	/**

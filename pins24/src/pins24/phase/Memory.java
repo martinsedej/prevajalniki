@@ -321,6 +321,7 @@ public class Memory {
 		//inti pa chari pa majo relativno pozicijo na zacetek kazalcnega sklada
 
 	}
+}
 
 	/**
 	 * Izracuna vrednost celostevilske konstante.
@@ -442,5 +443,4 @@ public class Memory {
 		}
 	}
 
-}
 }
