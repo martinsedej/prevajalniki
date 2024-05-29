@@ -2,6 +2,7 @@ package pins24.phase;
 
 import java.util.*;
 import pins24.common.*;
+import pins24.common.PDM.CodeInstr;
 import pins24.common.PDM.DataInstr;
 
 /**
@@ -167,16 +168,71 @@ public class CodeGen {
 			}
 
 		    /*** TODO ***/
+			//parametre po vrednosti, stringe po naslovu
+			
+			@Override
+			public List<PDM.CodeInstr> visit(final AST.FunDef funDef, final Mem.Frame arg){
+				funDef.pars.accept(this, null);
+				funDef.stmts.accept(this, null); //propagacija naprej
+
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+
+				for(int i = 0; i < funDef.stmts.size(); i++) {
+					code.addAll(attrAST.attrCode.get(funDef.stmts.get(i))); //dodam kodo od vsakega statementa funkcije
+				}
+				return code;
+			}
+
+			@Override
+			public List<PDM.CodeInstr> visit(final AST.AssignStmt stmt, final Mem.Frame arg){
+				List<PDM.CodeInstr> code = new ArrayList<PDM.CodeInstr>();
+				stmt.srcExpr.accept(this, null);
+				stmt.dstExpr.accept(this, null);
+
+
+				return code;
+			}
+
 			@Override
 			public List<PDM.CodeInstr> visit(AST.VarDef varDef, Mem.Frame arg){
-				List<DataInstr> dataInstr = new ArrayList<DataInstr>();
-				Mem.RelAccess access = attrAST.attrVarAccess.get(varDef); //kle rabm dodat neko preverjanje a je absAccess al rel in pravilno castat
-				dataInstr.add(new PDM.LABEL(access.debugName, null));
-				for(int i = 0; i < access.inits.size(); i++){
-					dataInstr.add(new PDM.DATA(access.inits.get(i), null));
+				if(attrAST.attrVarAccess.get(varDef) instanceof Mem.RelAccess){
+					List<DataInstr> data = new ArrayList<DataInstr>();
+					List<CodeInstr> code = new ArrayList<CodeInstr>();
+					String anonString = ":" + String.valueOf(labelCounter);
+					labelCounter++;
+					data.add(new PDM.LABEL(anonString, null));
+					Mem.RelAccess access = (Mem.RelAccess) attrAST.attrVarAccess.get(varDef);
+					for(int i = 0; i < access.inits.size(); i++){
+						data.add(new PDM.DATA(access.inits.get(i), null));
+					}
+					code.add(new PDM.REGN(PDM.REGN.Reg.FP, null));
+					code.add(new PDM.PUSH(access.offset, null));
+					code.add(new PDM.OPER(PDM.OPER.Oper.ADD, null));
+					code.add(new PDM.LABEL(anonString, null));
+					code.add(new PDM.INIT(null));
+
+					return code;
 				}
-				attrAST.attrData.put(varDef, dataInstr);
-				return null;
+				else {
+					List<DataInstr> dataInstr = new ArrayList<PDM.DataInstr>();
+					dataInstr.add(new PDM.LABEL(varDef.name, null));	//dodam ime spremenljivke
+					dataInstr.add(new PDM.SIZE(attrAST.attrVarAccess.get(varDef).size, null));	//rezerviram njen prostor
+					String anonString = ":" + String.valueOf(labelCounter);	//dodam nou anon label za inits od spremenljivke
+					dataInstr.add(new PDM.LABEL(anonString, null));
+					labelCounter++;
+					Mem.AbsAccess access = (Mem.AbsAccess) attrAST.attrVarAccess.get(varDef);
+					for(int i = 0; i < access.inits.size(); i++){
+						dataInstr.add(new PDM.DATA(access.inits.get(i), null));
+					}
+					attrAST.attrData.put(varDef, dataInstr);	//dodam kaj more bit u memoriju
+
+					List<PDM.CodeInstr> codeInstr = new ArrayList<PDM.CodeInstr>();
+					codeInstr.add(new PDM.NAME(varDef.name, null)); //katera spremenljivka se bo initializirala
+					codeInstr.add(new PDM.NAME(anonString, null)); //naslov inita za spremenlivko
+					codeInstr.add(new PDM.INIT(null));
+					attrAST.attrCode.put(varDef, codeInstr);
+					return codeInstr;					
+				}
 			}
 
 	}
