@@ -429,10 +429,7 @@ public class CodeGen {
 				code.addAll(unExpr.expr.accept(this, arg));
 				switch(unExpr.oper){
 					case NOT: code.add(new PDM.OPER(PDM.OPER.Oper.NOT, null)); break;
-					case SUB: 
-						code.add(new PDM.PUSH(-1, null));
-						code.add(new PDM.OPER(PDM.OPER.Oper.MUL, null)); 
-						break;
+					case SUB: code.add(new PDM.OPER(PDM.OPER.Oper.NEG, null)); break;
 					case MEMADDR: code.removeLast(); break;
 					case VALUEAT: code.add(new PDM.LOAD(null));
 				}
