@@ -1,3 +1,93 @@
-fun main() = f1(0)
+var seed=1
+fun random()=seed=seed*1664525+1013904223,seed
 
-fun f1(a) = a = !a, a
+fun heapsort(arraddr,n)=
+	let
+		var tmp=0 var cmps=0
+		fun heapify(n)=
+			let
+				var r=0
+			in
+				r=n/2,
+				while r>0 do
+					r=r-1,
+					siftdown(r,n)
+				end,
+				0
+			end
+		fun siftdown(r,n)=
+			let
+				var c=0 var tmp=0
+			in
+				c=2*r+1,
+				if c<n then
+					if c+1<n then
+						cmps=cmps+1,
+						if (arraddr+(c+1)*4)^>(arraddr+(c+0)*4)^ then c=c+1 end
+					end,
+					cmps=cmps+1,
+					if (arraddr+r*4)^<(arraddr+c*4)^ then
+						tmp=(arraddr+r*4)^,
+						(arraddr+r*4)^=(arraddr+c*4)^,
+						(arraddr+c*4)^=tmp,
+						siftdown(c,n)
+					end
+				end,
+				0
+			end
+	in
+		heapify(n),
+		n=n-1,
+		while n>0 do
+			tmp=(arraddr+(0)*4)^,
+			(arraddr+(0)*4)^=(arraddr+(n)*4)^,
+			(arraddr+(n)*4)^=tmp,
+			siftdown(0,n),
+			n=n-1
+		end,
+        cmps
+	end
+
+fun main()=
+	let
+		var n=0
+		var arr=0
+		var i=0
+		var r=0
+		var cmps=0
+	in
+		n=100,#getint(),
+		arr=new(n*4),
+		i=0,while i<n do
+			r=random(),
+			if r<0 then r=-r end,
+			r=r%50,
+			(arr+4*i)^=r,
+			i=i+1
+		end,
+		putstr("UNSORTED : \00"),
+		i=0,while i<n do
+			putint((arr+4*i)^),
+			if i<(n-1) then putstr(",\00") end,
+			i=i+1
+		end,putstr("\n\00"),
+		putstr("*** HEAPSORT *** \00"),
+		cmps=heapsort(arr,n),
+		putint(cmps),putstr("\n\00"),
+		putstr("SORTED   : \00"),
+		i=0,while i<n do
+			putint((arr+4*i)^),
+			if i<(n-1) then putstr(",\00") end,
+			i=i+1
+		end,putstr("\n\00"),
+		del(arr),
+		0
+	end
+
+fun exit(exitcode)
+fun getint()
+fun putint(intvalue)
+fun getstr(straddr)
+fun putstr(straddr)
+fun new(size)
+fun del(addr)
