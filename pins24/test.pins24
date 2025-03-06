@@ -1,51 +1,39 @@
 var seed=1
 fun random()=seed=seed*1664525+1013904223,seed
 
-fun heapsort(arraddr,n)=
+var arr=100*0
+
+fun quicksort(arraddr,n)=
 	let
-		var tmp=0 var cmps=0
-		fun heapify(n)=
+		var cmps=0
+		fun sort(m,n)=
 			let
-				var r=0
+				var i=0 var j=0 var v=0 var tmp=0 var apart=0
 			in
-				r=n/2,
-				while r>0 do
-					r=r-1,
-					siftdown(r,n)
-				end,
-				0
-			end
-		fun siftdown(r,n)=
-			let
-				var c=0 var tmp=0
-			in
-				c=2*r+1,
-				if c<n then
-					if c+1<n then
-						cmps=cmps+1,
-						if (arraddr+(c+1)*4)^>(arraddr+(c+0)*4)^ then c=c+1 end
+				if n>m then
+					i=m-1,j=n,v=(arraddr+n*4)^,apart=1,
+					while apart do
+						i=i+1,while (arraddr+i*4)^<v do
+							i=i+1,cmps=cmps+1
+						end,cmps=cmps+1,
+						j=j-1,while (arraddr+j*4)^>v do
+							j=j-1,cmps=cmps+1
+						end,cmps=cmps+1,
+						if i>=j then apart=0 else
+							tmp=(arraddr+i*4)^,
+							(arraddr+i*4)^=(arraddr+j*4)^,
+							(arraddr+j*4)^=tmp
+						end
 					end,
-					cmps=cmps+1,
-					if (arraddr+r*4)^<(arraddr+c*4)^ then
-						tmp=(arraddr+r*4)^,
-						(arraddr+r*4)^=(arraddr+c*4)^,
-						(arraddr+c*4)^=tmp,
-						siftdown(c,n)
-					end
+					tmp=(arraddr+i*4)^,
+					(arraddr+i*4)^=(arraddr+n*4)^,
+					(arraddr+n*4)^=tmp,
+					sort(m,j),sort(i+1,n)
 				end,
-				0
+				cmps
 			end
 	in
-		heapify(n),
-		n=n-1,
-		while n>0 do
-			tmp=(arraddr+(0)*4)^,
-			(arraddr+(0)*4)^=(arraddr+(n)*4)^,
-			(arraddr+(n)*4)^=tmp,
-			siftdown(0,n),
-			n=n-1
-		end,
-        cmps
+		sort(0,n-1)
 	end
 
 fun main()=
@@ -71,8 +59,8 @@ fun main()=
 			if i<(n-1) then putstr(",\00") end,
 			i=i+1
 		end,putstr("\n\00"),
-		putstr("*** HEAPSORT *** \00"),
-		cmps=heapsort(arr,n),
+		putstr("*** QUICKSORT *** \00"),
+		cmps=quicksort(arr,n),
 		putint(cmps),putstr("\n\00"),
 		putstr("SORTED   : \00"),
 		i=0,while i<n do

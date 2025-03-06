@@ -343,7 +343,7 @@ public class LexAn implements AutoCloseable {
 
 			default:
 				if(buffChar >= 'a' && buffChar <= 'z' || buffChar >= 'A' && buffChar <= 'Z' || buffChar == '_'){
-					String ime = ime();
+					String ime = ime();	//keywords ali ime spremenljivke
 					switch (ime){
 						case "fun":
 							buffToken = new Token(new Report.Location(buffCharLine, buffCharColumn - ime.length(), buffCharLine, buffCharColumn-1), Symbol.FUN, ime);
